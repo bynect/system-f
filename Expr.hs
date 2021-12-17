@@ -4,6 +4,7 @@ module Expr
     Expr(..),
     Type(..),
     Pretty,
+    pretty,
     pprint
   ) where
 

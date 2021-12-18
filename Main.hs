@@ -11,13 +11,13 @@ import Expr
 import Comb
 
 run :: Env -> TypeEnv -> String -> IO ()
-run env tenv s = case pRun parseExprTop s of
+run env tenv s = case pRun parseTopExpr s of
   Right (Just a) -> do
     pprint a
-    case checkExpr env tenv a of
+    case checkExpr env tenv $ unTopExpr a of
       Right t -> pprint t
       Left e -> putStrLn e
-  Right _ -> return ()
+  Right Nothing -> return ()
   Left e -> print e
 
 main :: IO ()

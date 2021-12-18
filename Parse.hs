@@ -1,8 +1,8 @@
 module Parse
   (
     parseExpr,
-    parseType,
-    parseExprTop
+    parseTopExpr,
+    parseType
   ) where
 
 import Expr
@@ -54,6 +54,18 @@ parseTLam = do
   e <- parseExpr
   return $ TLam a e
 
+parseTopExpr :: Parser (Maybe TopExpr)
+parseTopExpr = pChoice "top"
+  [ Just <$> do
+    x <- pIdent <* pSpaces
+    p x <|> p' x
+  , Just <$> Expr <$> parseExpr
+  , Nothing <$ pSpaces ]
+  where
+    p, p' :: String -> Parser TopExpr
+    p  x = Bind x <$> (pSymbol "=" *> parseExpr)
+    p' x = return $ Expr $ Var x
+
 parseType :: Parser Type
 parseType = do
   t <- pBetween pSpaces pSpaces p
@@ -80,8 +92,3 @@ parseTyPoly = do
   pSymbol "."
   t <- parseType
   return $ TyPoly a t
-
-parseExprTop :: Parser (Maybe Expr)
-parseExprTop = pChoice "top"
-  [ Just <$> parseExpr
-  , Nothing <$ pSpaces ]

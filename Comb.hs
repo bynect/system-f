@@ -79,7 +79,7 @@ pPred expected pred = pTry $ do
     False -> pError expected [c]
 
 pChoice :: String -> [Parser a] -> Parser a
-pChoice expected = foldr (<|>) (pError expected "no match")
+pChoice expected = foldr (<|>) (pError expected "other")
 
 pMany, pMany' :: Parser a -> Parser [a]
 pMany  p = pMany' p <|> pure []

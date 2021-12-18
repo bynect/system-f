@@ -1,7 +1,6 @@
 module Check
   (
-    Env,
-    TypeEnv,
+    Env, TypeEnv,
     checkExpr,
     checkType
   ) where

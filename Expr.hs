@@ -3,10 +3,9 @@ module Expr
   (
     Var,
     Expr(..),
+    TopExpr(..), unTopExpr,
     Type(..),
-    Pretty,
-    pretty,
-    pprint
+    Pretty, pretty, pprint
   ) where
 
 type Var = String
@@ -24,6 +23,14 @@ data Expr = Var Var
           | TLam Var Expr
           | App Expr Expr
           deriving (Show, Eq)
+
+data TopExpr = Bind Var Expr
+             | Expr Expr
+             deriving (Show, Eq)
+
+unTopExpr :: TopExpr -> Expr
+unTopExpr (Bind _ e) = e
+unTopExpr (Expr e)   = e
 
 {-
 τ = α         type variable
@@ -54,6 +61,10 @@ instance Pretty Expr where
       help' (Var x)  = x
       help' (Type t) = pretty $ Type t
       help' e        = "(" ++ pretty e ++ ")"
+
+instance Pretty TopExpr where
+  pretty (Bind x e) = x ++ " = " ++ pretty e
+  pretty (Expr e)   = pretty e
 
 instance Pretty Type where
   pretty (TyVar a)    = a

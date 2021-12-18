@@ -41,17 +41,17 @@ parseLam = do
 type ::= a
        | type -> type'
 -}
-parseType = pBetween pSpaces pSpaces p
+parseType = do
+  t <- pBetween pSpaces pSpaces p
+  pTry $ parseTyFun t <|> return t
   where
     p = pChoice "type"
       [ pParens parseType
-      , parseTyVar
-      , parseTyFun ]
+      , parseTyVar ]
 
-parseTyVar = TyVar <$> pIdent
+parseTyVar = TyVar <$> pIdent <* pSpaces
 
-parseTyFun = do
-  t <- parseType
+parseTyFun t = do
   pSymbol "->"
   t' <- parseType
   return $ TyFun t t'

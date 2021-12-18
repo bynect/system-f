@@ -44,11 +44,12 @@ checkExpr env tenv (TLam a e) = do
   t <- checkExpr env (Set.insert a tenv) e
   return $ TyPoly a t
 
+-- FIXME: Improve type applications
 checkExpr env tenv (App e (Type t)) = do
   t' <- checkExpr env tenv e
   case t' of
     TyPoly a u -> return $ subst (Map.singleton a t) u
-    _ -> throwError $ "Type application error"
+    _ -> throwError $ "Invalid type application" -- FIXME
 
 checkExpr env tenv (App e e') = do
   t  <- checkExpr env tenv e
@@ -64,3 +65,5 @@ checkType tenv (TyVar a) | Set.member a tenv = Nothing
 checkType tenv (TyFun t t') = case checkType tenv t of
   Nothing -> checkType tenv t'
   Just e  -> Just e
+
+checkType tenv (TyPoly a t) = checkType (Set.insert a tenv) t

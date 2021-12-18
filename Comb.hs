@@ -3,6 +3,7 @@
 module Comb
   (
     Error(..),
+    Parser,
     pAny,
     pEof,
     pError,

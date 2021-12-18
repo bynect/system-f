@@ -1,7 +1,8 @@
 module Parse
   (
     parseExpr,
-    parseType
+    parseType,
+    parseExprTop
   ) where
 
 import Expr
@@ -12,6 +13,7 @@ expr ::= x
        | \x : type . expr
        | expr expr'
 -}
+parseExpr :: Parser Expr
 parseExpr = do
   e <- pBetween pSpaces pSpaces p
   es <- pMany p'
@@ -26,8 +28,10 @@ parseExpr = do
       [ pParens parseExpr
       , parseVar ]
 
+parseVar :: Parser Expr
 parseVar = Var <$> pIdent <* pSpaces
 
+parseLam :: Parser Expr
 parseLam = do
   pSymbol "\\" <|> pSymbol "λ"
   x <- pIdent <* pSpaces
@@ -41,6 +45,7 @@ parseLam = do
 type ::= a
        | type -> type'
 -}
+parseType :: Parser Type
 parseType = do
   t <- pBetween pSpaces pSpaces p
   pTry $ parseTyFun t <|> return t
@@ -49,9 +54,16 @@ parseType = do
       [ pParens parseType
       , parseTyVar ]
 
+parseTyVar :: Parser Type
 parseTyVar = TyVar <$> pIdent <* pSpaces
 
+parseTyFun :: Type -> Parser Type
 parseTyFun t = do
   pSymbol "->"
   t' <- parseType
   return $ TyFun t t'
+
+parseExprTop :: Parser (Maybe Expr)
+parseExprTop = pChoice "top"
+  [ Just <$> parseExpr
+  , Nothing <$ pSpaces ]

@@ -18,12 +18,14 @@ type Env = Map.Map Var Type
 type TypeEnv = Set.Set Var
 
 checkExpr :: Env -> TypeEnv -> Expr -> Either String Type
-checkExpr env tenv (Var x) | Just t <- Map.lookup x env = maybe (Right t) Left $ checkType tenv t
+checkExpr env tenv (Var x) | Just t <- Map.lookup x env = Right t
                            | otherwise                  = Left $ "Unbound variable " ++ x
 
-checkExpr env tenv (Lam x t e) = do
-  t' <- checkExpr (Map.insert x t env) tenv e
-  return $ TyFun t t'
+checkExpr env tenv (Lam x t e) = case checkType tenv t of
+  Just e -> Left e
+  Nothing -> do
+    t' <- checkExpr (Map.insert x t env) tenv e
+    return $ TyFun t t'
 
 checkExpr env tenv (App e e') = do
   t  <- checkExpr env tenv e

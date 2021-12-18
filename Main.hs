@@ -11,21 +11,17 @@ import Expr
 import Comb
 
 run :: Env -> TypeEnv -> String -> IO ()
-run env tenv s = case pRun parseExpr s of
-  Right a -> do
+run env tenv s = case pRun parseExprTop s of
+  Right (Just a) -> do
     pprint a
     case checkExpr env tenv a of
       Right t -> pprint t
       Left e -> putStrLn e
+  Right _ -> return ()
   Left e -> print e
 
 main :: IO ()
 main = do
-  let env  = Map.empty
-      tenv = Set.fromList
-        [ "Int"
-        , "Bool" ]
-
   putStr "> "
   hFlush stdout
   eof <- isEOF
@@ -35,3 +31,8 @@ main = do
       s <- getLine
       run env tenv s
       main
+  where
+    env  = Map.empty
+    tenv = Set.fromList
+      [ "Int"
+      , "Bool" ]

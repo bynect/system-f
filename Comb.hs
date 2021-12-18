@@ -13,7 +13,7 @@ module Comb
     pChoice,
     pMany, pMany',
     pSepBy, pSepBy',
-    pChar, pIdent,
+    pChar,
     pSpace, pSpaces,
     pString, pSymbol,
     pBetween, pParens,
@@ -91,15 +91,6 @@ pSepBy' p p' = liftA2 (:) p $ pMany (p' >> p)
 
 pChar :: Char -> Parser Char
 pChar c = pPred [c] (== c)
-
-pIdent :: Parser String
-pIdent = do
-  x <- pPred "identifier" pred
-  xs <- pMany $ pPred "identifier" pred'
-  return (x:xs)
-  where
-    pred  c = isAsciiUpper c || isAsciiLower c || c == '_'
-    pred' c = pred c || isNumber c || c == '\''
 
 pSpace :: Parser Char
 pSpace = pPred "space" isSpace

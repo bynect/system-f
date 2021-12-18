@@ -8,6 +8,14 @@ module Parse
 import Expr
 import Comb
 
+parseIdent :: Parser String
+parseIdent = pMany' $ pPred "identifier" pred
+  where
+      pred c = (c >= 'a' && c <= 'z')
+            || (c >= 'A' && c <= 'Z')
+            || (c >= '0' && c <= '9')
+            || c == '_'
+
 parseExpr :: Parser Expr
 parseExpr = do
   e <- pBetween pSpaces pSpaces p
@@ -27,7 +35,7 @@ parseExpr = do
       , parseVar ]
 
 parseVar :: Parser Expr
-parseVar = Var <$> pIdent <* pSpaces
+parseVar = Var <$> parseIdent <* pSpaces
 
 parseType' :: Parser Expr
 parseType' = do
@@ -39,7 +47,7 @@ parseType' = do
 parseLam :: Parser Expr
 parseLam = do
   pSymbol "\\" <|> pSymbol "λ"
-  x <- pIdent <* pSpaces
+  x <- parseIdent <* pSpaces
   pSymbol ":"
   t <- parseType
   pSymbol "."
@@ -49,22 +57,20 @@ parseLam = do
 parseTLam :: Parser Expr
 parseTLam = do
   pSymbol "/\\" <|> pSymbol "Λ"
-  a <- pIdent <* pSpaces
+  a <- parseIdent <* pSpaces
   pSymbol "."
   e <- parseExpr
   return $ TLam a e
 
 parseTopExpr :: Parser (Maybe TopExpr)
 parseTopExpr = pChoice "top"
-  [ Just <$> do
-    x <- pIdent <* pSpaces
-    p x <|> p' x
+  [ Just <$> pTry p
   , Just <$> Expr <$> parseExpr
   , Nothing <$ pSpaces ]
   where
-    p, p' :: String -> Parser TopExpr
-    p  x = Bind x <$> (pSymbol "=" *> parseExpr)
-    p' x = return $ Expr $ Var x
+    p = do
+      x <- parseIdent <* pSpaces
+      Bind x <$> (pSymbol "=" *> parseExpr)
 
 parseType :: Parser Type
 parseType = do
@@ -77,7 +83,7 @@ parseType = do
       , parseTyVar ]
 
 parseTyVar :: Parser Type
-parseTyVar = TyVar <$> pIdent <* pSpaces
+parseTyVar = TyVar <$> parseIdent <* pSpaces
 
 parseTyFun :: Type -> Parser Type
 parseTyFun t = do
@@ -88,7 +94,7 @@ parseTyFun t = do
 parseTyPoly :: Parser Type
 parseTyPoly = do
   pSymbol "forall" <|> pSymbol "∀"
-  a <- pIdent <* pSpaces
+  a <- parseIdent <* pSpaces
   pSymbol "."
   t <- parseType
   return $ TyPoly a t

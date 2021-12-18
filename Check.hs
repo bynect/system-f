@@ -1,5 +1,6 @@
 module Check
   (
+    Env,
     TypeEnv,
     checkExpr,
     checkType
@@ -8,23 +9,33 @@ module Check
 import Control.Monad.Except
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Expr
 
-type TypeEnv = Map.Map Var Type
+type Env = Map.Map Var Type
 
-checkExpr :: TypeEnv -> Expr -> Either String Type
-checkExpr env (Var x) | Just t <- Map.lookup x env = Right t
-                      | otherwise                  = Left $ "Unbound variable " ++ x
+type TypeEnv = Set.Set Var
 
-checkExpr env (Lam x t e) = do
-  t' <- checkExpr (Map.insert x t env) e
+checkExpr :: Env -> TypeEnv -> Expr -> Either String Type
+checkExpr env tenv (Var x) | Just t <- Map.lookup x env = maybe (Right t) Left $ checkType tenv t
+                           | otherwise                  = Left $ "Unbound variable " ++ x
+
+checkExpr env tenv (Lam x t e) = do
+  t' <- checkExpr (Map.insert x t env) tenv e
   return $ TyFun t t'
 
-checkExpr env (App e e') = do
-  t  <- checkExpr env e
-  t' <- checkExpr env e'
+checkExpr env tenv (App e e') = do
+  t  <- checkExpr env tenv e
+  t' <- checkExpr env tenv e'
   case t of
     TyFun u u' | t' == u -> return u'
     _ -> throwError $ "Expected " ++ pretty (TyFun t' $ TyVar "a") ++ " instead of " ++ pretty t
 
-checkType = error ""
+checkType :: TypeEnv -> Type -> Maybe String
+checkType tenv (TyVar a) | Set.member a tenv = Nothing
+                         | otherwise         = Just $ "Unbound type variable " ++ a
+
+checkType tenv (TyFun t t') = case checkType tenv t of
+  Nothing -> checkType tenv t'
+  Just e  -> Just e

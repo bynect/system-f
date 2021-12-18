@@ -38,4 +38,4 @@ instance Pretty Type where
   pretty (TyFun t t') = help t ++ " -> " ++ pretty t'
     where
       help (TyVar a) = a
-      help t         = pretty t
+      help t         = "(" ++ pretty t ++ ")"

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Expr
   (
     Var,
@@ -11,11 +12,11 @@ module Expr
 type Var = String
 
 {-
-e = x
-  | [τ]
-  | λx:τ. e
-  | Λa. e
-  | e e'
+e = x         variable
+  | [τ]       type
+  | λx:τ. e   abstraction
+  | Λa. e     type abstraction
+  | e e'      application
 -}
 data Expr = Var Var
           | Type Type
@@ -25,9 +26,9 @@ data Expr = Var Var
           deriving (Show, Eq)
 
 {-
-τ = α
-  | τ → τ'
-  | ∀α. τ
+τ = α         type variable
+  | τ → τ'    type function
+  | ∀α. τ     universal quantifier
 -}
 data Type = TyVar Var
           | TyFun Type Type
@@ -61,7 +62,10 @@ instance Pretty Type where
       help (TyVar a) = a
       help t         = "(" ++ pretty t ++ ")"
 
+  -- NOTE: Consecutive universal quantifiers can be visually packed together
   pretty (TyPoly a t) = "∀" ++ help t a
     where
+#ifdef PACK_FORALL
       help (TyPoly a t) acc = help t $ acc ++ " " ++ a
+#endif
       help t            acc = acc ++ ". " ++ pretty t

@@ -3,7 +3,7 @@ module Expr
   (
     Var,
     Expr(..),
-    TopExpr(..), unTopExpr,
+    TopExpr(..),
     Type(..),
     Pretty, pretty, pprint
   ) where
@@ -27,10 +27,6 @@ data Expr = Var Var
 data TopExpr = Bind Var Expr
              | Expr Expr
              deriving (Show, Eq)
-
-unTopExpr :: TopExpr -> Expr
-unTopExpr (Bind _ e) = e
-unTopExpr (Expr e)   = e
 
 {-
 τ = α         type variable

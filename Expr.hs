@@ -10,6 +10,13 @@ module Expr
 
 type Var = String
 
+{-
+e = x
+  | [τ]
+  | λx:τ. e
+  | Λa. e
+  | e e'
+-}
 data Expr = Var Var
           | Type Type
           | Lam Var Type Expr
@@ -17,6 +24,11 @@ data Expr = Var Var
           | App Expr Expr
           deriving (Show, Eq)
 
+{-
+τ = α
+  | τ → τ'
+  | ∀α. τ
+-}
 data Type = TyVar Var
           | TyFun Type Type
           | TyPoly Var Type
@@ -44,11 +56,12 @@ instance Pretty Expr where
 
 instance Pretty Type where
   pretty (TyVar a)    = a
-  pretty (TyFun t t') = help t ++ " -> " ++ pretty t'
+  pretty (TyFun t t') = help t ++ " → " ++ pretty t'
     where
       help (TyVar a) = a
       help t         = "(" ++ pretty t ++ ")"
-  pretty (TyPoly a t) = "∀" ++ help t a --a ++ ". " ++ pretty t
+
+  pretty (TyPoly a t) = "∀" ++ help t a
     where
       help (TyPoly a t) acc = help t $ acc ++ " " ++ a
       help t            acc = acc ++ ". " ++ pretty t

@@ -8,11 +8,6 @@ module Parse
 import Expr
 import Comb
 
-{-
-expr ::= x
-       | \x : type . expr
-       | expr expr'
--}
 parseExpr :: Parser Expr
 parseExpr = do
   e <- pBetween pSpaces pSpaces p
@@ -59,10 +54,6 @@ parseTLam = do
   e <- parseExpr
   return $ TLam a e
 
-{-
-type ::= a
-       | type -> type'
--}
 parseType :: Parser Type
 parseType = do
   t <- pBetween pSpaces pSpaces p
@@ -78,7 +69,7 @@ parseTyVar = TyVar <$> pIdent <* pSpaces
 
 parseTyFun :: Type -> Parser Type
 parseTyFun t = do
-  pSymbol "->"
+  pSymbol "->" <|> pSymbol "→"
   t' <- parseType
   return $ TyFun t t'
 

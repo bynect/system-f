@@ -92,7 +92,13 @@ pChar :: Char -> Parser Char
 pChar c = pPred [c] (== c)
 
 pIdent :: Parser String
-pIdent = pMany' $ pPred "identifier" $ \c -> isAsciiUpper c || isAsciiLower c || c == '_'
+pIdent = do
+  x <- pPred "identifier" pred
+  xs <- pMany $ pPred "identifier" pred'
+  return (x:xs)
+  where
+    pred  c = isAsciiUpper c || isAsciiLower c || c == '_'
+    pred' c = pred c || isNumber c || c == '\''
 
 pSpace :: Parser Char
 pSpace = pPred "space" isSpace

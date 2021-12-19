@@ -24,8 +24,8 @@ data Expr = Var Var
           | App Expr Expr
           deriving (Show, Eq)
 
-data TopExpr = Bind Var Expr
-             | Expr Expr
+data TopExpr = Expr Expr
+             | Bind Var Expr
              deriving (Show, Eq)
 
 {-
@@ -59,8 +59,8 @@ instance Pretty Expr where
       help' e        = "(" ++ pretty e ++ ")"
 
 instance Pretty TopExpr where
-  pretty (Bind x e) = x ++ " = " ++ pretty e
   pretty (Expr e)   = pretty e
+  pretty (Bind x e) = x ++ " = " ++ pretty e
 
 instance Pretty Type where
   pretty (TyVar a)    = a

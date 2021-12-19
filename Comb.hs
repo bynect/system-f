@@ -9,8 +9,8 @@ module Comb
     pTry,
     (<|>),
     pPred,
-    pMany, pMany',
-    pSepBy, pSepBy',
+    pMany, pMany1,
+    pSepBy, pSepBy1,
     pChoice, pManyTill,
     pChar,
     pSpace, pSpaces,
@@ -77,13 +77,13 @@ pPred expected pred = pTry $ do
     True  -> pure c
     False -> pError expected [c]
 
-pMany, pMany' :: Parser a -> Parser [a]
-pMany  p = pMany' p <|> pure []
-pMany' p = liftA2 (:) p $ pMany p
+pMany, pMany1 :: Parser a -> Parser [a]
+pMany  p = pMany1 p <|> pure []
+pMany1 p = liftA2 (:) p $ pMany p
 
-pSepBy, pSepBy' :: Parser a -> Parser b -> Parser [a]
-pSepBy  p p' = pSepBy' p p' <|> pure []
-pSepBy' p p' = liftA2 (:) p $ pMany (p' >> p)
+pSepBy, pSepBy1 :: Parser a -> Parser b -> Parser [a]
+pSepBy  p p' = pSepBy1 p p' <|> pure []
+pSepBy1 p p' = liftA2 (:) p $ pMany (p' >> p)
 
 pChoice :: String -> [Parser a] -> Parser a
 pChoice expected = foldr (<|>) (pError expected "other")

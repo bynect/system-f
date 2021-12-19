@@ -9,7 +9,7 @@ import Expr
 import Comb
 
 parseIdent :: Parser String
-parseIdent = pMany' $ pPred "identifier" pred
+parseIdent = pMany1 $ pPred "identifier" pred
   where
       pred c = (c >= 'a' && c <= 'z')
             || (c >= 'A' && c <= 'Z')
@@ -29,6 +29,7 @@ parseSpace = pChoice "whitespace"
   , pSpace       *> parseSpace
   , return () ]
   where
+    -- NOTE: Assumes eof and newline are the same
     lineComment  = pTry (pString "--") *> pManyTill pAny pEof
     blockComment = pTry (pString "{-") *> pManyTill pAny (pTry $ pString "-}")
 

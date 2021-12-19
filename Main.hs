@@ -11,24 +11,25 @@ import Parse
 import Expr
 import Comb
 
-run :: IORef Env -> IORef TypeEnv -> String -> IO ()
-run env tenv s = case pRun parseTopExpr s of
+runExpr :: Env -> TypeEnv -> Expr -> (Type -> IO ()) -> IO ()
+runExpr env tenv e f = case checkExpr env tenv e of
+  Right t -> f t
+  Left e  -> putStrLn e
+
+runTop :: IORef Env -> IORef TypeEnv -> String -> IO ()
+runTop env tenv s = case pRun parseTopExpr s of
   Right (Just a) -> do
     env'  <- readIORef env
     tenv' <- readIORef tenv
     pprint a
     case a of
-      Bind x e -> case checkExpr env' tenv' e of
-          Right t -> do
-            putStr $ x ++ " : "
-            pprint t
-            modifyIORef env $ Map.insert x t
-          Left e  -> putStrLn e
-      Expr e -> case checkExpr env' tenv' e of
-        Right t -> pprint t
-        Left e  -> putStrLn e
-  Right Nothing -> putStrLn ""
-  Left e -> print e
+      Expr e   -> runExpr env' tenv' e pprint
+      Bind x e -> runExpr env' tenv' e $ \t -> do
+        putStr $ x ++ " : "
+        pprint t
+        modifyIORef env $ Map.insert x t
+  Right Nothing  -> putStrLn ""
+  Left e         -> print e
 
 loop :: IORef Env -> IORef TypeEnv -> IO ()
 loop env tenv = do
@@ -39,7 +40,7 @@ loop env tenv = do
     then putStrLn ""
     else do
       s <- getLine
-      run env tenv s
+      runTop env tenv s
       loop env tenv
 
 main :: IO ()

@@ -24,11 +24,13 @@ parseParen p = pBetween (parseSym "(") (parseSym ")") p
 
 parseSpace :: Parser ()
 parseSpace = pChoice "whitespace"
-  [ comment *> return ()
-  , pSpace  *> parseSpace
+  [ lineComment  *> parseSpace
+  , blockComment *> parseSpace
+  , pSpace       *> parseSpace
   , return () ]
   where
-    comment = pTry (pString "--") *> (pManyTill pAny pEof)
+    lineComment  = pTry (pString "--") *> pManyTill pAny pEof
+    blockComment = pTry (pString "{-") *> pManyTill pAny (pTry $ pString "-}")
 
 parseExpr :: Parser Expr
 parseExpr = do
@@ -75,8 +77,8 @@ parseTLam = do
 
 parseTopExpr :: Parser (Maybe TopExpr)
 parseTopExpr = parseSpace *> pChoice "top"
-  [ Just <$> pTry p
-  , Just <$> Expr <$> parseExpr
+  [ Just    <$> pTry p
+  , Just    <$> Expr <$> parseExpr
   , Nothing <$ pEof ]
   where
     p = do

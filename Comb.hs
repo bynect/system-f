@@ -4,19 +4,18 @@ module Comb
   (
     Error(..),
     Parser,
-    pAny,
-    pEof,
+    pAny, pEof,
     pError,
     pTry,
     (<|>),
     pPred,
-    pChoice,
     pMany, pMany',
     pSepBy, pSepBy',
+    pChoice, pManyTill,
     pChar,
     pSpace, pSpaces,
-    pString, pSymbol,
-    pBetween, pParens,
+    pString,
+    pBetween,
     pRun
   ) where
 
@@ -78,9 +77,6 @@ pPred expected pred = pTry $ do
     True  -> pure c
     False -> pError expected [c]
 
-pChoice :: String -> [Parser a] -> Parser a
-pChoice expected = foldr (<|>) (pError expected "other")
-
 pMany, pMany' :: Parser a -> Parser [a]
 pMany  p = pMany' p <|> pure []
 pMany' p = liftA2 (:) p $ pMany p
@@ -88,6 +84,20 @@ pMany' p = liftA2 (:) p $ pMany p
 pSepBy, pSepBy' :: Parser a -> Parser b -> Parser [a]
 pSepBy  p p' = pSepBy' p p' <|> pure []
 pSepBy' p p' = liftA2 (:) p $ pMany (p' >> p)
+
+pChoice :: String -> [Parser a] -> Parser a
+pChoice expected = foldr (<|>) (pError expected "other")
+
+pManyTill :: Parser a -> Parser b -> Parser [a]
+pManyTill p p' = go
+  where
+    go = do
+        _ <- p'
+        return []
+      <|> do
+        x <- p
+        xs <- go
+        return (x:xs)
 
 pChar :: Char -> Parser Char
 pChar c = pPred [c] (== c)
@@ -101,14 +111,8 @@ pSpaces = pMany pSpace
 pString :: String -> Parser String
 pString = traverse pChar
 
-pSymbol :: String -> Parser String
-pSymbol s = pString s <* pSpaces
-
 pBetween :: Parser a -> Parser b -> Parser c -> Parser c
 pBetween b a p = b *> p <* a
-
-pParens :: Parser a -> Parser a
-pParens p = pBetween (pSymbol "(") (pSymbol ")") p
 
 pRun :: Parser a -> String -> Either Error a
 pRun p s = snd $ runParser (p <* pEof) s

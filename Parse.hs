@@ -16,85 +16,93 @@ parseIdent = pMany' $ pPred "identifier" pred
             || (c >= '0' && c <= '9')
             || c == '_'
 
+parseSym :: String -> Parser String
+parseSym s = pString s <* parseSpace
+
+parseParen :: Parser a -> Parser a
+parseParen p = pBetween (parseSym "(") (parseSym ")") p
+
+parseSpace :: Parser ()
+parseSpace = pChoice "whitespace"
+  [ comment *> return ()
+  , pSpace  *> parseSpace
+  , return () ]
+  where
+    comment = pTry (pString "--") *> (pManyTill pAny pEof)
+
 parseExpr :: Parser Expr
 parseExpr = do
-  e <- pBetween pSpaces pSpaces p
-  es <- pMany p'
+  e <- pBetween parseSpace parseSpace p
+  es <- pMany $ p' <* parseSpace
   return $ foldl App e es
   where
     p = pChoice "expression"
-      [ pParens parseExpr
+      [ parseParen parseExpr
       , parseLam
       , parseTLam
       , parseType'
-      , parseVar ]
+      , Var <$> parseIdent ]
 
     p' = pChoice "argument"
-      [ pParens parseExpr
+      [ parseParen parseExpr
       , parseType'
-      , parseVar ]
-
-parseVar :: Parser Expr
-parseVar = Var <$> parseIdent <* pSpaces
+      , Var <$> parseIdent ]
 
 parseType' :: Parser Expr
 parseType' = do
-  pSymbol "["
+  parseSym "["
   t <- parseType
-  pSymbol "]"
+  parseSym "]"
   return $ Type t
 
 parseLam :: Parser Expr
 parseLam = do
-  pSymbol "\\" <|> pSymbol "λ"
-  x <- parseIdent <* pSpaces
-  pSymbol ":"
+  parseSym "\\" <|> parseSym "λ"
+  x <- parseIdent <* parseSpace
+  parseSym ":"
   t <- parseType
-  pSymbol "."
+  parseSym "."
   e <- parseExpr
   return $ Lam x t e
 
 parseTLam :: Parser Expr
 parseTLam = do
-  pSymbol "/\\" <|> pSymbol "Λ"
-  a <- parseIdent <* pSpaces
-  pSymbol "."
+  parseSym "/\\" <|> parseSym "Λ"
+  a <- parseIdent <* parseSpace
+  parseSym "."
   e <- parseExpr
   return $ TLam a e
 
 parseTopExpr :: Parser (Maybe TopExpr)
-parseTopExpr = pChoice "top"
+parseTopExpr = parseSpace *> pChoice "top"
   [ Just <$> pTry p
   , Just <$> Expr <$> parseExpr
-  , Nothing <$ pSpaces ]
+  , Nothing <$ pEof ]
   where
     p = do
-      x <- parseIdent <* pSpaces
-      Bind x <$> (pSymbol "=" *> parseExpr)
+      x <- parseIdent <* parseSpace
+      Bind x <$> (parseSym "=" *> parseExpr)
 
 parseType :: Parser Type
 parseType = do
-  t <- pBetween pSpaces pSpaces p
+  t <- pBetween parseSpace parseSpace p
   pTry $ parseTyFun t <|> return t
   where
     p = pChoice "type"
-      [ pParens parseType
+      [ parseParen parseType
       , parseTyPoly
-      , parseTyVar ]
-
-parseTyVar :: Parser Type
-parseTyVar = TyVar <$> parseIdent <* pSpaces
+      , TyVar <$> parseIdent ]
 
 parseTyFun :: Type -> Parser Type
 parseTyFun t = do
-  pSymbol "->" <|> pSymbol "→"
+  parseSym "->" <|> parseSym "→"
   t' <- parseType
   return $ TyFun t t'
 
 parseTyPoly :: Parser Type
 parseTyPoly = do
-  pSymbol "forall" <|> pSymbol "∀"
-  a <- parseIdent <* pSpaces
-  pSymbol "."
+  parseSym "forall" <|> parseSym "∀"
+  a <- parseIdent <* parseSpace
+  parseSym "."
   t <- parseType
   return $ TyPoly a t

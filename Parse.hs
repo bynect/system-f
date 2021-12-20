@@ -6,6 +6,7 @@ module Parse
     parseType) where
 
 import Control.Monad
+import Data.Function ((&))
 import Expr
 import Comb
 
@@ -118,7 +119,7 @@ parseLet = do
 #endif
 
 parseTopExpr :: Parser (Maybe TopExpr)
-parseTopExpr = parseSpace *> pChoice "top"
+parseTopExpr = parseSpace *> pChoice "top expression"
   [ Just    <$> pTry p
   , Just    <$> Expr <$> parseExpr
   , Nothing <$ pEof ]

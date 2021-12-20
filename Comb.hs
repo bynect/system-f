@@ -4,7 +4,8 @@ module Comb
   (
     ParseError,
     Parser,
-    pAny, pEof,
+    pAny,
+    pEof,
     pError,
     pTry,
     (<|>),
@@ -16,6 +17,7 @@ module Comb
     pSpace, pSpaces,
     pString,
     pBetween,
+    pEol,
     pRun
   ) where
 
@@ -113,6 +115,9 @@ pString = traverse pChar
 
 pBetween :: Parser a -> Parser b -> Parser c -> Parser c
 pBetween b a p = b *> p <* a
+
+pEol :: Parser ()
+pEol = (void $ pChar '\n') <|> pEof
 
 pRun :: Parser a -> String -> Either ParseError a
 pRun p s = snd $ runParser (p <* pEof) s

@@ -110,4 +110,3 @@ instance Eq Type where
       go env (TyPoly a t) (TyPoly b t') | a == b              = go env t t'
                                         | otherwise           = go (Map.insert a b env) t t'
       go env _ _                                              = False
-

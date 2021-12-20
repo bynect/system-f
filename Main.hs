@@ -1,7 +1,10 @@
+{-# LANGUAGE LambdaCase #-}
 module Main where
 
-import System.IO (hFlush, isEOF, stdout)
+import System.IO
+import System.Environment
 import Data.IORef
+import Control.Monad (forM_)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)

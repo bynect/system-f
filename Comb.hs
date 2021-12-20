@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Comb
   (
-    Error(..),
+    ParseError,
     Parser,
     pAny, pEof,
     pError,
@@ -24,14 +24,14 @@ import Control.Applicative (liftA2)
 import Data.Functor
 import Data.Char
 
-data Error = Error { expected :: String
-                   , found    :: String }
+data ParseError = PError { expected :: String
+                          , found    :: String }
 
-instance Show Error where
-  show (Error expected found) = "Expected " ++ expected ++ " instead of " ++ found
+instance Show ParseError where
+  show (PError expected found) = "Expected " ++ expected ++ " instead of " ++ found
 
-newtype Parser a = Parser { runParser :: String -> (String, Either Error a) }
-                   deriving Functor
+newtype Parser a = Parser { runParser :: String -> (String, Either ParseError a)
+                          } deriving Functor
 
 instance Applicative Parser where
   pure = return
@@ -49,15 +49,15 @@ instance Monad Parser where
 pAny :: Parser Char
 pAny = Parser $ \case
   (x:xs) -> (xs, Right x)
-  []     -> ("", Left $ Error "any" "eof")
+  []     -> ("", Left $ PError "any" "eof")
 
 pEof :: Parser ()
 pEof = Parser $ \case
   [] -> ("", Right ())
-  xs -> (xs, Left $ Error "eof" xs)
+  xs -> (xs, Left $ PError "eof" xs)
 
 pError :: String -> String -> Parser a
-pError expected found = Parser $ \s -> (s, Left $ Error expected found)
+pError expected found = Parser $ \s -> (s, Left $ PError expected found)
 
 pTry :: Parser a -> Parser a
 pTry p = Parser $ \s -> case runParser p s of
@@ -114,5 +114,5 @@ pString = traverse pChar
 pBetween :: Parser a -> Parser b -> Parser c -> Parser c
 pBetween b a p = b *> p <* a
 
-pRun :: Parser a -> String -> Either Error a
+pRun :: Parser a -> String -> Either ParseError a
 pRun p s = snd $ runParser (p <* pEof) s

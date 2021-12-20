@@ -1,5 +1,5 @@
 GHC=ghc
-CPP=#-DPACK_FORALL
+CPP=-DPACK_FORALL
 
 all: Main
 

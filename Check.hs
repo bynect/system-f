@@ -1,5 +1,7 @@
+{-# LANGUAGE LambdaCase #-}
 module Check
   (
+    CheckError(..),
     Env, TypeEnv,
     checkExpr,
     checkType
@@ -12,22 +14,26 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Expr
 
+data CheckError = UnboundVar Var
+                | UnboundTyVar Var
+                | AppError  (Expr, Type) (Expr, Type)
+                | TAppError (Expr, Type) Type
+
 type Env = Map.Map Var Type
 
 type TypeEnv = Set.Set Var
 
 subst :: Env -> Type -> Type
-subst env (TyVar a) | Just t <- Map.lookup a env = t
-                    | otherwise                  = TyVar a
+subst env = \case
+  TyVar a | Just t <- Map.lookup a env -> t
+          | otherwise                  -> TyVar a
+  TyFun t t'                           -> TyFun (subst env t) (subst env t')
+  TyPoly a t | Map.notMember a env     -> TyPoly a (subst env t)
+             | otherwise               -> TyPoly a t
 
-subst env (TyFun t t') = TyFun (subst env t) (subst env t')
-
-subst env (TyPoly a t) | Map.notMember a env = TyPoly a (subst env t)
-                       | otherwise           = TyPoly a t
-
-checkExpr :: Env -> TypeEnv -> Expr -> Either String Type
+checkExpr :: Env -> TypeEnv -> Expr -> Either CheckError Type
 checkExpr env _ (Var x) | Just t <- Map.lookup x env = Right t
-                        | otherwise                  = Left $ "Unbound variable " ++ x
+                        | otherwise                  = Left $ UnboundVar x
 
 checkExpr env tenv (Lam x t e) = case checkType tenv t of
   Just e  -> Left e
@@ -44,18 +50,18 @@ checkExpr env tenv (App e e') = do
   t' <- checkExpr env tenv e'
   case t of
     TyFun u u' | t' == u -> return u'
-    _ -> throwError $ "Expected " ++ pretty (TyFun t' $ TyVar "a") ++ " instead of " ++ pretty t
+    _ -> Left $ AppError (e, t) (e', t')
 
 checkExpr env tenv (TApp e t) | Just e <- checkType tenv t = Left e
                               | otherwise                  = do
   t' <- checkExpr env tenv e
   case t' of
     TyPoly a u -> return $ subst (Map.singleton a t) u
-    _ -> throwError $ "Invalid type application" -- FIXME
+    _ -> Left $ TAppError (e, t') t
 
-checkType :: TypeEnv -> Type -> Maybe String
+checkType :: TypeEnv -> Type -> Maybe CheckError
 checkType tenv (TyVar a) | Set.member a tenv = Nothing
-                         | otherwise         = Just $ "Unbound type variable " ++ a
+                         | otherwise         = Just $ UnboundTyVar a
 
 checkType tenv (TyFun t t') = case checkType tenv t of
   Nothing -> checkType tenv t'

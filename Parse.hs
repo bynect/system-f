@@ -9,7 +9,10 @@ import Expr
 import Comb
 
 parseIdent :: Parser String
-parseIdent = pMany1 $ pPred "identifier" pred
+parseIdent = do
+  s <- pMany1 $ pPred "identifier" pred
+  s' <- pMany $ pPred "identifier" (== '\'')
+  return $ s ++ s'
   where
       pred c = (c >= 'a' && c <= 'z')
             || (c >= 'A' && c <= 'Z')

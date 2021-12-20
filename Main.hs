@@ -33,7 +33,7 @@ runTop env tenv s = case pRun parseTopExpr s of
 
 loop :: IORef Env -> IORef TypeEnv -> IO ()
 loop env tenv = do
-  putStr "> "
+  putStr "c> "
   hFlush stdout
   eof <- isEOF
   if eof

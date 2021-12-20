@@ -39,6 +39,7 @@ data Type = TyVar Var
           | TyFun Type Type
           | TyPoly Var Type
           deriving (Show, Eq)
+          -- FIXME: Eq should be implemented manually
 
 class Pretty a where
   pretty :: a -> String
@@ -48,8 +49,18 @@ pprint = putStrLn . pretty
 
 instance Pretty Expr where
   pretty (Var x)      = x
+  -- FIXME: Consecutive abstractions still needs to specify the type of each
+  -- bound variables, so concatenation is less obvious in this case
   pretty (Lam x t e)  = "λ" ++ x ++ ":" ++ pretty t ++ ". " ++ pretty e
-  pretty (TLam a e)   = "Λ" ++ a ++ ". " ++ pretty e
+  pretty (TLam a e)   = "Λ" ++ a ++ help e
+    where
+      -- NOTE: Consecutive type abstractions can be be packed together
+      -- easily by concatenating their bound variables
+#ifdef PACK_TLAM
+      help (TLam a e) = " " ++ a ++ help e
+#endif
+      help e          = ". " ++ pretty e
+
   pretty (App e e')   = help (App e e')
     where
       help (App e e') = help e ++ " " ++ help' e'
@@ -80,7 +91,7 @@ instance Pretty Type where
     where
       -- NOTE: Consecutive universal quantifiers can be packed in the same
       -- quantifier, however if they quantify over the same type variable
-      -- they should't be packed together
+      -- they shouldn't be packed together
 #ifdef PACK_FORALL
       help (TyPoly a t) acc | isSuffixOf a acc = acc ++ ". " ++ pretty (TyPoly a t)
                             | otherwise        = help t $ acc ++ " " ++ a

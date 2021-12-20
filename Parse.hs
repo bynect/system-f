@@ -1,15 +1,17 @@
+{-# LANGUAGE CPP #-}
 module Parse
   (
     parseExpr,
     parseTopExpr,
     parseType) where
 
+import Control.Monad
 import Expr
 import Comb
 
 parseIdent :: Parser String
 parseIdent = do
-  s <- pMany1 $ pPred "identifier" pred
+  s  <- pMany1 $ pPred "identifier" pred
   s' <- pMany $ pPred "identifier" (== '\'')
   return $ s ++ s'
   where
@@ -17,6 +19,26 @@ parseIdent = do
             || (c >= 'A' && c <= 'Z')
             || (c >= '0' && c <= '9')
             || c == '_'
+
+-- Identifiers except expression-related keywords
+parseIdentExpr :: Parser String
+#ifdef SUGAR_LET
+parseIdentExpr = do
+  s <- parseIdent
+  if s == "let" || s == "in"
+    then pError "identifier" "keyword"
+    else return s
+#else
+parseIdentExpr = parseIdent
+#endif
+
+-- Identifiers except type-related keywords
+parseIdentType :: Parser String
+parseIdentType = do
+  s <- parseIdent
+  if s == "forall"
+    then pError "identifier" "keyword"
+    else return s
 
 parseSym :: String -> Parser String
 parseSym s = pString s <* parseSpace
@@ -42,10 +64,13 @@ parseExpr = p >>= p'
       [ parseParen parseExpr
       , parseLam
       , parseTLam
+#ifdef SUGAR_LET
+      , parseLet
+#endif
       , parseVar <* parseSpace ]
 
     p' e = do
-        e' <- parseParen parseExpr <|> parseVar
+        e' <- parseParen parseExpr <|> pTry parseVar
         parseSpace
         p' $ App e e'
       <|> do
@@ -54,12 +79,12 @@ parseExpr = p >>= p'
       <|> return e
 
 parseVar :: Parser Expr
-parseVar = Var <$> parseIdent
+parseVar = Var <$> parseIdentExpr
 
 parseLam :: Parser Expr
 parseLam = do
   parseSym "\\" <|> parseSym "λ"
-  x <- parseIdent <* parseSpace
+  x <- parseIdentExpr <* parseSpace
   parseSym ":"
   t <- parseType
   parseSym "."
@@ -69,10 +94,28 @@ parseLam = do
 parseTLam :: Parser Expr
 parseTLam = do
   parseSym "/\\" <|> parseSym "Λ"
-  a <- parseIdent <* parseSpace
+  a <- parseIdentType <* parseSpace
   parseSym "."
   e <- parseExpr
   return $ TLam a e
+
+#ifdef SUGAR_LET
+-- NOTE: Let expressions can be transparently desugared to abstractions
+--
+-- let x:τ = e in e'
+-- (λx:τ. e') e
+parseLet :: Parser Expr
+parseLet = do
+  parseSym "let"
+  x  <- parseIdentExpr <* parseSpace
+  parseSym ":"
+  t  <- parseType
+  parseSym "="
+  e  <- parseExpr
+  parseSym "in"
+  e' <- parseExpr
+  return $ App (Lam x t e') e
+#endif
 
 parseTopExpr :: Parser (Maybe TopExpr)
 parseTopExpr = parseSpace *> pChoice "top"
@@ -81,7 +124,7 @@ parseTopExpr = parseSpace *> pChoice "top"
   , Nothing <$ pEof ]
   where
     p = do
-      x <- parseIdent <* parseSpace
+      x <- parseIdentExpr <* parseSpace
       Bind x <$> (parseSym "=" *> parseExpr)
 
 parseType :: Parser Type
@@ -92,7 +135,7 @@ parseType = do
     p = pChoice "type"
       [ parseParen parseType
       , parseTyPoly
-      , TyVar <$> parseIdent ]
+      , TyVar <$> parseIdentType ]
 
 parseTyFun :: Type -> Parser Type
 parseTyFun t = do
@@ -103,7 +146,7 @@ parseTyFun t = do
 parseTyPoly :: Parser Type
 parseTyPoly = do
   parseSym "forall" <|> parseSym "∀"
-  a <- parseIdent <* parseSpace
+  a <- parseIdentType <* parseSpace
   parseSym "."
   t <- parseType
   return $ TyPoly a t

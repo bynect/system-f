@@ -11,24 +11,31 @@ import Parse
 import Expr
 import Comb
 
-printError :: CheckError -> IO ()
-printError (UnboundVar x)             = putStrLn $ "Unbound variable `" ++ x ++ "`"
-printError (UnboundTyVar a)           = putStrLn $ "Unbound type variable `" ++ a ++ "`"
-printError (AppError (e, t) (e', t')) = do
+putIndent :: String -> IO ()
+putIndent s = putStr "  " >> putStrLn s
+
+putError :: CheckError -> IO ()
+putError (UnboundVar x)             = do
+  putStrLn $ "Unbound variable"
+  putIndent x
+putError (UnboundTyVar a)           = do
+  putStrLn $ "Unbound type variable"
+  putIndent a
+putError (AppError (e, t) (e', t')) = do
   putStrLn "Failed application of"
-  putStrLn $ "  " ++ pretty e ++ "  :  " ++ pretty t
+  putIndent $ pretty e ++ "  :  " ++ pretty t
   putStrLn "with"
-  putStrLn $ "  " ++ pretty e ++ "  :  " ++ pretty t
-printError (TAppError (e, t) t') = do
+  putIndent $ pretty e ++ "  :  " ++ pretty t
+putError (TAppError (e, t) t') = do
   putStrLn "Failed type application of"
-  putStrLn $ "  " ++ pretty e ++ "  :  " ++ pretty t
+  putIndent $ pretty e ++ "  :  " ++ pretty t
   putStrLn "with type"
-  putStrLn $ "  " ++ pretty t'
+  putIndent $ pretty t'
 
 runExpr :: Env -> TypeEnv -> Expr -> (Type -> IO ()) -> IO ()
 runExpr env tenv e f = case checkExpr env tenv e of
   Right t -> f t
-  Left e  -> putStrLn "⊥\n" >> printError e
+  Left e  -> putStrLn "⊥\n" >> putError e
 
 runTop :: IORef Env -> IORef TypeEnv -> String -> IO ()
 runTop env tenv s = case pRun parseTopExpr s of

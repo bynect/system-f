@@ -8,7 +8,10 @@ module Expr
     Pretty, pretty, pprint
   ) where
 
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.List
+import Data.Tuple
 
 type Var = String
 
@@ -38,8 +41,7 @@ data TopExpr = Expr Expr
 data Type = TyVar Var
           | TyFun Type Type
           | TyPoly Var Type
-          deriving (Show, Eq)
-          -- FIXME: Eq should be implemented manually
+          deriving Show
 
 class Pretty a where
   pretty :: a -> String
@@ -97,3 +99,15 @@ instance Pretty Type where
                             | otherwise        = help t $ acc ++ " " ++ a
 #endif
       help t            acc                    = acc ++ ". " ++ pretty t
+
+instance Eq Type where
+  (==) = go Map.empty
+    where
+      go env (TyVar a) (TyVar b) | Just c <- Map.lookup a env = b == c
+                                 | Just _ <- Map.lookup b env = False
+                                 | otherwise                  = a == b
+      go env (TyFun a b) (TyFun c d)                          = go env a c && go env b d
+      go env (TyPoly a t) (TyPoly b t') | a == b              = go env t t'
+                                        | otherwise           = go (Map.insert a b env) t t'
+      go env _ _                                              = False
+

@@ -125,7 +125,8 @@ parseTopExpr = parseSpace *> pChoice "top"
   where
     p = do
       x <- parseIdentExpr <* parseSpace
-      Bind x <$> (parseSym "=" *> parseExpr)
+      parseSym "="
+      Bind x <$> parseExpr
 
 parseType :: Parser Type
 parseType = do

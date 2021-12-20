@@ -2,8 +2,7 @@ module Parse
   (
     parseExpr,
     parseTopExpr,
-    parseType
-  ) where
+    parseType) where
 
 import Expr
 import Comb
@@ -37,29 +36,25 @@ parseSpace = pChoice "whitespace"
     blockComment = pTry (pString "{-") *> pManyTill pAny (pTry $ pString "-}")
 
 parseExpr :: Parser Expr
-parseExpr = do
-  e <- pBetween parseSpace parseSpace p
-  es <- pMany $ p' <* parseSpace
-  return $ foldl App e es
+parseExpr = p >>= p'
   where
     p = pChoice "expression"
       [ parseParen parseExpr
       , parseLam
       , parseTLam
-      , parseType'
-      , Var <$> parseIdent ]
+      , parseVar <* parseSpace ]
 
-    p' = pChoice "argument"
-      [ parseParen parseExpr
-      , parseType'
-      , Var <$> parseIdent ]
+    p' e = do
+        e' <- parseParen parseExpr <|> parseVar
+        parseSpace
+        p' $ App e e'
+      <|> do
+        t <- parseSym "[" *> parseType <* parseSym "]"
+        p' $ TApp e t
+      <|> return e
 
-parseType' :: Parser Expr
-parseType' = do
-  parseSym "["
-  t <- parseType
-  parseSym "]"
-  return $ Type t
+parseVar :: Parser Expr
+parseVar = Var <$> parseIdent
 
 parseLam :: Parser Expr
 parseLam = do

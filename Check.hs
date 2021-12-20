@@ -29,10 +29,6 @@ checkExpr :: Env -> TypeEnv -> Expr -> Either String Type
 checkExpr env _ (Var x) | Just t <- Map.lookup x env = Right t
                         | otherwise                  = Left $ "Unbound variable " ++ x
 
-checkExpr _ tenv (Type t) = case checkType tenv t of
-  Just e  -> Left e
-  Nothing -> Right t
-
 checkExpr env tenv (Lam x t e) = case checkType tenv t of
   Just e  -> Left e
   Nothing -> do
@@ -43,19 +39,19 @@ checkExpr env tenv (TLam a e) = do
   t <- checkExpr env (Set.insert a tenv) e
   return $ TyPoly a t
 
--- FIXME: Improve type applications
-checkExpr env tenv (App e (Type t)) = do
-  t' <- checkExpr env tenv e
-  case t' of
-    TyPoly a u -> return $ subst (Map.singleton a t) u
-    _ -> throwError $ "Invalid type application" -- FIXME
-
 checkExpr env tenv (App e e') = do
   t  <- checkExpr env tenv e
   t' <- checkExpr env tenv e'
   case t of
     TyFun u u' | t' == u -> return u'
     _ -> throwError $ "Expected " ++ pretty (TyFun t' $ TyVar "a") ++ " instead of " ++ pretty t
+
+checkExpr env tenv (TApp e t) | Just e <- checkType tenv t = Left e
+                              | otherwise                  = do
+  t' <- checkExpr env tenv e
+  case t' of
+    TyPoly a u -> return $ subst (Map.singleton a t) u
+    _ -> throwError $ "Invalid type application" -- FIXME
 
 checkType :: TypeEnv -> Type -> Maybe String
 checkType tenv (TyVar a) | Set.member a tenv = Nothing

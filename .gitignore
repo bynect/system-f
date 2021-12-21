@@ -1,0 +1,4 @@
+!*.hs
+!Makefile
+!*.txt
+*

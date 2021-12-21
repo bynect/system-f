@@ -1,10 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 module Check
   (
+    Env,
     CheckError(..),
-    Env, TypeEnv,
     checkExpr,
-    checkType
   ) where
 
 import Control.Monad.Except
@@ -21,50 +20,60 @@ data CheckError = UnboundVar Var
 
 type Env = Map.Map Var Type
 
-type TypeEnv = Set.Set Var
+type FtvSet = Set.Set Var
 
-subst :: Env -> Type -> Type
-subst env = \case
+ftv :: FtvSet -> Type -> FtvSet
+ftv env (TyVar a) | a `Set.member` env = Set.empty
+                  | otherwise          = Set.singleton a
+ftv env (TyFun t t') = ftv env t `Set.union` ftv env t'
+ftv env (TyPoly a t) = ftv (Set.insert a env) t
+
+substVar :: Var -> Var -> Type -> Type
+substVar b c = \case
+  TyVar a    -> TyVar $ if a == b then c else a
+  TyFun t t' -> TyFun (substVar b c t) (substVar b c t')
+  TyPoly a t -> TyPoly a $ if a == b then t else substVar b c t
+
+-- TODO: Is this useful?
+substType :: Env -> Type -> Type
+substType env = \case
   TyVar a | Just t <- Map.lookup a env -> t
           | otherwise                  -> TyVar a
-  TyFun t t'                           -> TyFun (subst env t) (subst env t')
-  TyPoly a t | Map.notMember a env     -> TyPoly a (subst env t)
+  TyFun t t'                           -> TyFun (substType env t) (substType env t')
+  TyPoly a t | Map.notMember a env     -> TyPoly a (substType env t)
              | otherwise               -> TyPoly a t
 
-checkExpr :: Env -> TypeEnv -> Expr -> Either CheckError Type
-checkExpr env _ (Var x) | Just t <- Map.lookup x env = Right t
-                        | otherwise                  = Left $ UnboundVar x
+unique :: FtvSet -> Var
+unique ftvs = go 0
+  where
+    go n = let t = "t" ++ show n in
+      if t `Set.member` ftvs
+        then go (n + 1)
+        else t
 
-checkExpr env tenv (Lam x t e) = case checkType tenv t of
-  Just e  -> Left e
-  Nothing -> do
-    t' <- checkExpr (Map.insert x t env) tenv e
-    return $ TyFun t t'
-
-checkExpr env tenv (TLam a e) = do
-  t <- checkExpr env (Set.insert a tenv) e
-  return $ TyPoly a t
-
-checkExpr env tenv (App e e') = do
-  t  <- checkExpr env tenv e
-  t' <- checkExpr env tenv e'
+checkExpr :: Env -> Expr -> Either CheckError Type
+checkExpr env (Var x) | Just t <- Map.lookup x env = Right t
+                      | otherwise                  = Left $ UnboundVar x
+checkExpr env (Lam x t e) = TyFun t  <$> checkExpr (Map.insert x t env) e
+checkExpr env (TLam a e)  = TyPoly a <$> checkExpr env e
+checkExpr env (App e e')  = do
+  t  <- checkExpr env e
+  t' <- checkExpr env e'
   case t of
     TyFun u u' | t' == u -> return u'
-    _ -> Left $ AppError (e, t) (e', t')
-
-checkExpr env tenv (TApp e t) | Just e <- checkType tenv t = Left e
-                              | otherwise                  = do
-  t' <- checkExpr env tenv e
+    _                    -> Left $ AppError (e, t) (e', t')
+checkExpr env (TApp e t)  = do
+  t' <- checkExpr env e
   case t' of
-    TyPoly a u -> return $ subst (Map.singleton a t) u
-    _ -> Left $ TAppError (e, t') t
-
-checkType :: TypeEnv -> Type -> Maybe CheckError
-checkType tenv (TyVar a) | Set.member a tenv = Nothing
-                         | otherwise         = Just $ UnboundTyVar a
-
-checkType tenv (TyFun t t') = case checkType tenv t of
-  Nothing -> checkType tenv t'
-  Just e  -> Just e
-
-checkType tenv (TyPoly a t) = checkType (Set.insert a tenv) t
+    TyPoly a u -> return $ help u
+      where
+        -- NOTE: Handle name conflicts with free type variables
+          help (TyVar b) | a == b                 = t
+                         | otherwise              = TyVar b
+          help (TyFun t t')                       = TyFun (help t) (help t')
+          help (TyPoly b t) | a == b              = TyPoly b t
+                            | b `Set.member` ftvs = let c = unique ftvs in TyPoly c $ help $ substVar b c t
+                            | otherwise           = TyPoly b (help t)
+            where
+              ftvs = ftv Set.empty t
+    _          -> Left $ TAppError (e, t') t

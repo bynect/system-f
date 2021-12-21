@@ -18,45 +18,47 @@ putIndent :: String -> IO ()
 putIndent s = putStr "  " >> putStrLn s
 
 putError :: CheckError -> IO ()
-putError (UnboundVar x)             = do
-  putStrLn $ "Unbound variable"
-  putIndent x
-putError (UnboundTyVar a)           = do
-  putStrLn $ "Unbound type variable"
-  putIndent a
+putError (UnboundVar x)             = putStrLn $ "• Variable not bound `" ++ x ++ "`"
+putError (UnboundTyVar a)           = putStrLn $ "• Type variable not bound `" ++ a ++ "`"
 putError (AppError (e, t) (e', t')) = do
-  putStrLn "Failed application of"
-  putIndent $ pretty e ++ "  :  " ++ pretty t
-  putStrLn "with"
-  putIndent $ pretty e ++ "  :  " ++ pretty t
+  putStrLn $ "• Invalid application"
+  putStrLn $ "• Expression of type `" ++ pretty t ++ "`"
+  putStrLn $ "    " ++ pretty e
+  putStrLn $ "  was applied to expression of type `" ++ pretty t' ++ "`"
+  putStrLn $ "    " ++ pretty e'
+
 putError (TAppError (e, t) t') = do
-  putStrLn "Failed type application of"
-  putIndent $ pretty e ++ "  :  " ++ pretty t
-  putStrLn "with type"
-  putIndent $ pretty t'
+  putStrLn $ "• Invalid type application"
+  putStrLn $ "• Expression of type `" ++ pretty t ++ "`"
+  putStrLn $ "    " ++ pretty e
+  putStrLn $ "  was applied to type `" ++ pretty t' ++ "`"
 
-runExpr :: Env -> TypeEnv -> Expr -> (Type -> IO ()) -> IO ()
-runExpr env tenv e f = case checkExpr env tenv e of
+handleExpr :: Env -> Expr -> (Type -> IO ()) -> IO ()
+handleExpr env e f = case checkExpr env e of
   Right t -> f t
-  Left e  -> putStrLn "⊥\n" >> putError e
+  Left  e -> do
+    putStrLn "⊥"
+    putStrLn ""
+    putError e
 
-runTop :: IORef Env -> IORef TypeEnv -> String -> IO ()
-runTop env tenv s = case pRun parseTopExpr s of
-  Right (Just a) -> do
+handleTopExpr :: IORef Env -> Maybe TopExpr -> IO ()
+handleTopExpr env = \case
+  Just a  -> do
     env'  <- readIORef env
-    tenv' <- readIORef tenv
     pprint a
     case a of
-      Expr e   -> runExpr env' tenv' e pprint
-      Bind x e -> runExpr env' tenv' e $ \t -> do
+      Expr e   -> handleExpr env' e pprint
+      Bind x e -> handleExpr env' e $ \t -> do
         putStr $ x ++ " : "
         pprint t
         modifyIORef env $ Map.insert x t
-  Right Nothing  -> putStrLn ""
-  Left e         -> print e
+  Nothing -> putStrLn ""
 
-loop :: IORef Env -> IORef TypeEnv -> IO ()
-loop env tenv = do
+handleFile :: IORef Env -> String -> IO ()
+handleFile env f = error "Not implemented yet"
+
+handleLoop :: IORef Env -> IO ()
+handleLoop env = do
   putStr "c> "
   hFlush stdout
   eof <- isEOF
@@ -64,13 +66,15 @@ loop env tenv = do
     then putStrLn ""
     else do
       s <- getLine
-      runTop env tenv s
-      loop env tenv
+      case pRun parseTopExpr s of
+        Right a -> handleTopExpr env a
+        Left e  -> print e
+      handleLoop env
 
 main :: IO ()
 main = do
-  env  <- newIORef $ Map.empty
-  tenv <- newIORef $ Set.fromList
-    [ "Int"
-    , "Bool" ]
-  loop env tenv
+  env <- newIORef $ Map.empty
+  args <- getArgs
+  case args of
+    f:_ -> handleFile env f
+    []  -> handleLoop env

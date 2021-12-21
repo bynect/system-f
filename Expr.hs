@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+#include "Symbol.h"
+
 module Expr
   (
     Var, ExprEnv, TypeEnv,
@@ -56,22 +58,6 @@ data TopExpr = Expr Expr
 data Type = TyVar Var
           | TyFun Type Type
           | TyPoly Var Type
-
-#ifdef SHOW_UNICODE
-#define SHOW_LAM     "λ"
-#define SHOW_TLAM    "Λ"
-#define SHOW_ARROW   "→"
-#define SHOW_FORALL  "∀"
-#define SHOW_ENV     "Γ"
-#define SHOW_TENV    "Θ"
-#else
-#define SHOW_LAM     "\\"
-#define SHOW_TLAM    "/\\"
-#define SHOW_ARROW   "->"
-#define SHOW_FORALL  "forall "
-#define SHOW_ENV     "E"
-#define SHOW_TENV    "TE"
-#endif
 
 instance Show Expr where
   show (Var x)        = x

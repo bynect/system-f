@@ -24,18 +24,18 @@ instance Show CheckError where
   show (UnboundTyVar a)              = "• Type variable not bound `" ++ a ++ "`"
   show (ApplyFail (e, t) (e', t') u) = intercalate "\n"
     [ "• Invalid application" ++ help u
-    , "• Expression of type `" ++ pretty t ++ "`"
-    , "    " ++ pretty e
-    , "  was applied to expression of type `" ++ pretty t' ++ "`"
-    , "    " ++ pretty e' ]
+    , "• Expression of type `" ++ show t ++ "`"
+    , "    " ++ show e
+    , "  was applied to expression of type `" ++ show t' ++ "`"
+    , "    " ++ show e' ]
     where
-      help (Just t) = ", expected type `" ++ pretty t ++ "`"
+      help (Just t) = ", expected type `" ++ show t ++ "`"
       help Nothing  = ""
   show (TApplyFail (e, t) t')        = intercalate "\n"
     [ "• Invalid type application"
-    , "• Expression of type `" ++ pretty t ++ "`"
-    , "    " ++ pretty e
-    , "  was applied to type `" ++ pretty t' ++ "`" ]
+    , "• Expression of type `" ++ show t ++ "`"
+    , "    " ++ show e
+    , "  was applied to type `" ++ show t' ++ "`" ]
 
 substType :: (Var, Type) -> Type -> Type
 substType s@(b, t) = \case

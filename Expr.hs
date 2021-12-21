@@ -1,11 +1,9 @@
 {-# LANGUAGE CPP #-}
 module Expr
   (
-    Var,
-    ExprEnv, TypeEnv,
+    Var, ExprEnv, TypeEnv,
     Expr(..), TopExpr(..),
     Type(..),
-    Pretty, pretty, pprint
   ) where
 
 import Data.Map (Map)
@@ -44,11 +42,11 @@ data Expr = Var Var
           | TLam Var Expr
           | App Expr Expr
           | TApp Expr Type
-          deriving (Show, Eq)
+          deriving Eq
 
 data TopExpr = Expr Expr
              | Bind Var Expr
-             deriving (Show, Eq)
+             deriving Eq
 
 {-
 τ = α         type variable
@@ -58,64 +56,75 @@ data TopExpr = Expr Expr
 data Type = TyVar Var
           | TyFun Type Type
           | TyPoly Var Type
-          deriving Show
 
-class Pretty a where
-  pretty :: a -> String
+#ifdef SHOW_UNICODE
+#define SHOW_LAM     "λ"
+#define SHOW_TLAM    "Λ"
+#define SHOW_ARROW   "→"
+#define SHOW_FORALL  "∀"
+#define SHOW_ENV     "Γ"
+#define SHOW_TENV    "Θ"
+#else
+#define SHOW_LAM     "\\"
+#define SHOW_TLAM    "/\\"
+#define SHOW_ARROW   "->"
+#define SHOW_FORALL  "forall "
+#define SHOW_ENV     "E"
+#define SHOW_TENV    "TE"
+#endif
 
-pprint :: Pretty a => a -> IO ()
-pprint = putStrLn . pretty
-
-instance Pretty Expr where
-  pretty (Var x)      = x
+instance Show Expr where
+  show (Var x)        = x
   -- FIXME: Consecutive abstractions still needs to specify the type of each
   -- bound variables, so concatenation is less obvious in this case
-  pretty (Lam x t e)  = "λ" ++ x ++ ":" ++ pretty t ++ ". " ++ pretty e
-  pretty (TLam a e)   = "Λ" ++ a ++ help e
+  show (Lam x t e)    = SHOW_LAM  ++ x ++ ":" ++ show t ++ ". " ++ show e
+  show (TLam a e)     = SHOW_TLAM ++ a ++ help e
     where
+#ifdef PACK_TLAM
       -- NOTE: Consecutive type abstractions can be be packed together
       -- easily by concatenating their bound variables
-#ifdef PACK_TLAM
       help (TLam a e) = " " ++ a ++ help e
 #endif
-      help e          = ". " ++ pretty e
+      help e          = ". " ++ show e
 
-  pretty (App e e')   = help (App e e')
+  show (App e e')     = help (App e e')
     where
       help (App e e') = help e ++ " " ++ help' e'
       help e          = help' e
 
       help' (Var x)   = x
-      help' e         = "(" ++ pretty e ++ ")"
-  pretty (TApp e t)   = help e ++ " [" ++ pretty t ++ "]"
+      help' e         = "(" ++ show e ++ ")"
+  show (TApp e t)     = help e ++ " [" ++ show t ++ "]"
     where
-      help (TApp e t) = pretty (TApp e t)
+      help (TApp e t) = show (TApp e t)
       help (Var x)    = x
-      help e          = "(" ++ pretty e ++ ")"
+      help e          = "(" ++ show e ++ ")"
 
-instance Pretty TopExpr where
-  pretty (Expr e)   = pretty e
-  pretty (Bind x e) = x ++ " = " ++ pretty e
+instance Show TopExpr where
+  show (Expr e)   = show e
+  show (Bind x e) = x ++ " = " ++ show e
 
-instance Pretty Type where
-  pretty (TyVar a)       = a
-  pretty (TyFun t t')    = help t ++ " → " ++ help' t'
+instance Show Type where
+  show (TyVar a)         = a
+  show (TyFun t t')      = help t ++ arrow ++ help' t'
     where
+      arrow              = " " ++ SHOW_ARROW ++ " "
+
       help (TyVar a)     = a
-      help t             = "(" ++ pretty t ++ ")"
+      help t             = "(" ++ show t ++ ")"
 
-      help' (TyPoly a t) = "(" ++ pretty (TyPoly a t) ++ ")"
-      help' t            = pretty t
-  pretty (TyPoly a t)    = "∀" ++ help t a
+      help' (TyPoly a t) = "(" ++ show (TyPoly a t) ++ ")"
+      help' t            = show t
+  show (TyPoly a t)      = SHOW_FORALL ++ help t a
     where
+#ifdef PACK_FORALL
       -- NOTE: Consecutive universal quantifiers can be packed in the same
       -- quantifier, however if they quantify over the same type variable
       -- they shouldn't be packed together
-#ifdef PACK_FORALL
-      help (TyPoly a t) acc | isSuffixOf a acc = acc ++ ". " ++ pretty (TyPoly a t)
+      help (TyPoly a t) acc | isSuffixOf a acc = acc ++ ". " ++ show (TyPoly a t)
                             | otherwise        = help t $ acc ++ " " ++ a
 #endif
-      help t            acc                    = acc ++ ". " ++ pretty t
+      help t            acc                    = acc ++ ". " ++ show t
 
 instance Eq Type where
   (==) = go Map.empty

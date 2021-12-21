@@ -22,12 +22,12 @@ handleExpr env tenv e f = case checkExpr env tenv e of
 handleTopExpr :: IORef ExprEnv -> TypeEnv -> Maybe TopExpr -> IO ()
 handleTopExpr env tenv (Just a) = do
     env'  <- readIORef env
-    pprint a
+    print a
     case a of
-      Expr e   -> handleExpr env' tenv e pprint
+      Expr e   -> handleExpr env' tenv e print
       Bind x e -> handleExpr env' tenv e $ \t -> do
         putStr $ x ++ " : "
-        pprint t
+        print t
         modifyIORef env $ Map.insert x t
 handleTopExpr _   _    Nothing  = putStrLn ""
 

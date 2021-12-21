@@ -3,10 +3,12 @@ module Parse
   (
     parseExpr,
     parseTopExpr,
-    parseType) where
+    parseType
+  ) where
 
 import Control.Monad
 import Data.Function ((&))
+import Data.Char
 import Expr
 import Comb
 
@@ -51,15 +53,19 @@ parseSpace :: Parser ()
 parseSpace = pChoice "whitespace"
   [ lineComment  *> parseSpace
   , blockComment *> parseSpace
-  , pSpace       *> parseSpace
+  , whitespace   *> parseSpace
   , return () ]
   where
-    -- NOTE: Assumes eof and newline are the same
-    lineComment  = pTry (pString "--") *> pManyTill pAny pEof
+    lineComment  = pTry (pString "--") *> pManyTill pAny pEol
     blockComment = pTry (pString "{-") *> pManyTill pAny (pTry $ pString "-}")
+    whitespace   = void $ pMany1 $ pPred "space" $ \c ->
+      c == '\t' || c == ' ' || c == '\r'
+
+parseSpaceLine :: Parser ()
+parseSpaceLine = parseSpace <|> void pSpaces
 
 parseExpr :: Parser Expr
-parseExpr = p >>= p'
+parseExpr = p >>= parseApp
   where
     p = pChoice "expression"
       [ parseParen parseExpr
@@ -69,15 +75,6 @@ parseExpr = p >>= p'
       , parseLet
 #endif
       , parseVar <* parseSpace ]
-
-    p' e = do
-        e' <- parseParen parseExpr <|> pTry parseVar
-        parseSpace
-        p' $ App e e'
-      <|> do
-        t <- parseSym "[" *> parseType <* parseSym "]"
-        p' $ TApp e t
-      <|> return e
 
 parseVar :: Parser Expr
 parseVar = Var <$> parseIdentExpr
@@ -100,6 +97,16 @@ parseTLam = do
   e <- parseExpr
   return $ TLam a e
 
+parseApp :: Expr -> Parser Expr
+parseApp e = do
+    e' <- parseParen parseExpr <|> pTry parseVar
+    parseSpace
+    parseApp $ App e e'
+  <|> do
+    t <- parseSym "[" *> parseType <* parseSym "]"
+    parseApp $ TApp e t
+  <|> return e
+
 #ifdef SUGAR_LET
 -- NOTE: Let expressions can be transparently desugared to abstractions
 --
@@ -119,15 +126,13 @@ parseLet = do
 #endif
 
 parseTopExpr :: Parser (Maybe TopExpr)
-parseTopExpr = parseSpace *> pChoice "top expression"
-  [ Just    <$> pTry p
-  , Just    <$> Expr <$> parseExpr
+parseTopExpr = (parseSpaceLine *>) . (<* pEol) $  pChoice "top expression"
+  [ Just <$> (parseIdentExpr <* parseSpace >>= p)
+  , Just <$> Expr <$> parseExpr
   , Nothing <$ pEof ]
   where
-    p = do
-      x <- parseIdentExpr <* parseSpace
-      parseSym "="
-      Bind x <$> parseExpr
+      p x = pTry (parseSym "=" >> Bind x <$> parseExpr)
+            <|> (Expr <$> (parseApp $ Var x))
 
 parseType :: Parser Type
 parseType = do

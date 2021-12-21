@@ -14,50 +14,27 @@ import Parse
 import Expr
 import Comb
 
-putIndent :: String -> IO ()
-putIndent s = putStr "  " >> putStrLn s
-
-putError :: CheckError -> IO ()
-putError (UnboundVar x)             = putStrLn $ "• Variable not bound `" ++ x ++ "`"
-putError (UnboundTyVar a)           = putStrLn $ "• Type variable not bound `" ++ a ++ "`"
-putError (AppError (e, t) (e', t')) = do
-  putStrLn $ "• Invalid application"
-  putStrLn $ "• Expression of type `" ++ pretty t ++ "`"
-  putStrLn $ "    " ++ pretty e
-  putStrLn $ "  was applied to expression of type `" ++ pretty t' ++ "`"
-  putStrLn $ "    " ++ pretty e'
-
-putError (TAppError (e, t) t') = do
-  putStrLn $ "• Invalid type application"
-  putStrLn $ "• Expression of type `" ++ pretty t ++ "`"
-  putStrLn $ "    " ++ pretty e
-  putStrLn $ "  was applied to type `" ++ pretty t' ++ "`"
-
-handleExpr :: Env -> Expr -> (Type -> IO ()) -> IO ()
-handleExpr env e f = case checkExpr env e of
+handleExpr :: ExprEnv -> TypeEnv -> Expr -> (Type -> IO ()) -> IO ()
+handleExpr env tenv e f = case checkExpr env tenv e of
   Right t -> f t
-  Left  e -> do
-    putStrLn "⊥"
-    putStrLn ""
-    putError e
+  Left  e -> putStr ['⊥', '\n', '\n'] >> print e
 
-handleTopExpr :: IORef Env -> Maybe TopExpr -> IO ()
-handleTopExpr env = \case
-  Just a  -> do
+handleTopExpr :: IORef ExprEnv -> TypeEnv -> Maybe TopExpr -> IO ()
+handleTopExpr env tenv (Just a) = do
     env'  <- readIORef env
     pprint a
     case a of
-      Expr e   -> handleExpr env' e pprint
-      Bind x e -> handleExpr env' e $ \t -> do
+      Expr e   -> handleExpr env' tenv e pprint
+      Bind x e -> handleExpr env' tenv e $ \t -> do
         putStr $ x ++ " : "
         pprint t
         modifyIORef env $ Map.insert x t
-  Nothing -> putStrLn ""
+handleTopExpr _   _    Nothing  = putStrLn ""
 
-handleFile :: IORef Env -> String -> IO ()
+handleFile :: IORef ExprEnv -> String -> IO ()
 handleFile env f = error "Not implemented yet"
 
-handleLoop :: IORef Env -> IO ()
+handleLoop :: IORef ExprEnv -> IO ()
 handleLoop env = do
   putStr "c> "
   hFlush stdout
@@ -67,13 +44,17 @@ handleLoop env = do
     else do
       s <- getLine
       case pRun parseTopExpr s of
-        Right a -> handleTopExpr env a
+        Right a -> handleTopExpr env tenv a
         Left e  -> print e
       handleLoop env
+  where
+    tenv = Set.fromList
+      [ "Nat"
+      , "Bool" ]
 
 main :: IO ()
 main = do
-  env <- newIORef $ Map.empty
+  env  <- newIORef $ Map.empty
   args <- getArgs
   case args of
     f:_ -> handleFile env f

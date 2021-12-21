@@ -2,18 +2,35 @@
 module Expr
   (
     Var,
-    Expr(..),
-    TopExpr(..),
+    ExprEnv, TypeEnv,
+    Expr(..), TopExpr(..),
     Type(..),
     Pretty, pretty, pprint
   ) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.List
 import Data.Tuple
 
+{-
+x
+-}
 type Var = String
+
+{-
+Γ = ɛ         empty
+  | Γ, x:τ    assumptions
+-}
+type ExprEnv = Map.Map Var Type
+
+{-
+Θ = ɛ         empty
+  | Θ, α      type assumptions
+-}
+type TypeEnv = Set.Set Var
 
 {-
 e = x         variable

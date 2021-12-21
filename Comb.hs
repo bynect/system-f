@@ -7,7 +7,7 @@ module Comb
     pAny,
     pEof,
     pError,
-    pTry,
+    pTry, pOpt,
     (<|>),
     pPred,
     pMany, pMany1,
@@ -65,6 +65,9 @@ pTry :: Parser a -> Parser a
 pTry p = Parser $ \s -> case runParser p s of
   (s', Right a) -> (s', Right a)
   (_, e)        -> (s, e)
+
+pOpt :: a -> Parser a -> Parser a
+pOpt x p = p <|> return x
 
 (<|>) :: Parser a -> Parser a -> Parser a
 p <|> p' = Parser $ \s -> case runParser p s of

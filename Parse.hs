@@ -49,6 +49,9 @@ parseSym s = pString s <* parseSpace
 parseParen :: Parser a -> Parser a
 parseParen p = pBetween (parseSym "(") (parseSym ")") p
 
+parseBrack :: Parser a -> Parser a
+parseBrack p = pBetween (parseSym "[") (parseSym "]") p
+
 parseComment :: Parser ()
 parseComment = void $ p <|> p'
   where
@@ -113,7 +116,7 @@ parseApp e = do
     parseSpace
     parseApp $ App e e'
   <|> do
-    t <- parseSym "[" *> parseType <* parseSym "]"
+    t <- parseBrack parseType
     parseApp $ TApp e t
   <|> return e
 
@@ -143,16 +146,20 @@ parseTopExpr = parseSpace *> pChoice "top expression"
   where
     p = do
       x <- parseIdentExpr <* parseSpace
-      pTry (parseSym "=" >> Bind x <$> parseExpr)
-        <|> (Expr <$> (parseApp $ Var x))
+      pChoice "top expression"
+        [ pTry $ parseSym "=" >> Bind x <$> parseExpr
+        , pTry $ parseSym "=" >> parseBrack (BindTy x <$> parseType)
+        , Expr <$> (parseApp $ Var x) ]
 
 parseTopExpr' :: Parser [TopExpr]
 parseTopExpr' = pManyTill (parseSpace' *> (pTry p <|> p') <* parseSpace') pEof
   where
-    p = (parseIdentExpr <* parseSpace) >>= \x -> pTry $ do
-        parseSym "="
-        Bind x <$> parseExpr
-      <|> (Expr <$> (parseApp $ Var x))
+    p  = do
+      x <- parseIdentExpr <* parseSpace
+      pChoice "top expression"
+        [ pTry $ parseSym "=" >> Bind x <$> parseExpr
+        , pTry $ parseSym "=" >> parseBrack (BindTy x <$> parseType)
+        , Expr <$> (parseApp $ Var x) ]
 
     p' = Expr <$> parseExpr
 

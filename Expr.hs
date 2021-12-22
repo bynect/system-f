@@ -25,13 +25,14 @@ type Var = String
 Γ = ɛ         empty
   | Γ, x:τ    assumptions
 -}
-type ExprEnv = Map.Map Var Type
+type ExprEnv = Map Var Type
 
 {-
 Θ = ɛ         empty
   | Θ, α      type assumptions
 -}
-type TypeEnv = Set.Set Var
+-- TODO: Fix this before implementing F Omega
+type TypeEnv = Set Var
 
 {-
 e = x         variable
@@ -40,15 +41,16 @@ e = x         variable
   | e e'      application
   | e [τ]     type application
 -}
-data Expr = Var Var
-          | Lam Var Type Expr
-          | TLam Var Expr
-          | App Expr Expr
+data Expr = Var  Var
+          | Lam  Var  Type Expr
+          | TLam Var  Expr
+          | App  Expr Expr
           | TApp Expr Type
           deriving Eq
 
-data TopExpr = Expr Expr
-             | Bind Var Expr
+data TopExpr = Expr   Expr
+             | Bind   Var Expr
+             | BindTy Var Type
              deriving Eq
 
 {-
@@ -56,9 +58,9 @@ data TopExpr = Expr Expr
   | τ → τ'    type function
   | ∀α. τ     universal quantifier
 -}
-data Type = TyVar Var
-          | TyFun Type Type
-          | TyPoly Var Type
+data Type = TyVar  Var
+          | TyFun  Type Type
+          | TyPoly Var  Type
 
 instance Show Expr where
   show (Var x)        = x
@@ -88,8 +90,9 @@ instance Show Expr where
       help e          = "(" ++ show e ++ ")"
 
 instance Show TopExpr where
-  show (Expr e)   = show e
-  show (Bind x e) = x ++ " = " ++ show e
+  show (Expr e)     = show e
+  show (Bind x e)   = x ++ " = " ++ show e
+  show (BindTy a t) = a ++ " = [" ++ show t ++ "]"
 
 instance Show Type where
   show (TyVar a)         = a

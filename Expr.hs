@@ -16,7 +16,7 @@ import Data.List
 import Data.Tuple
 
 {-
-x
+x | α
 -}
 type Var = String
 

@@ -1,4 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE CPP #-}
+#include "Symbol.h"
+
 module Check
   (
     CheckError(..),
@@ -12,30 +15,36 @@ import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.List (intercalate)
+import Text.Printf
 import Expr
 
+-- TODO: Change application related errors
 data CheckError = UnboundVar   Var
                 | UnboundTyVar Var
                 | ApplyFail  (Expr, Type) (Expr, Type) (Maybe Type)
                 | TApplyFail (Expr, Type) Type
 
 instance Show CheckError where
-  show (UnboundVar x)                = "• Variable not bound `" ++ x ++ "`"
-  show (UnboundTyVar a)              = "• Type variable not bound `" ++ a ++ "`"
-  show (ApplyFail (e, t) (e', t') u) = intercalate "\n"
-    [ "• Invalid application" ++ help u
-    , "• Expression of type `" ++ show t ++ "`"
-    , "    " ++ show e
-    , "  was applied to expression of type `" ++ show t' ++ "`"
-    , "    " ++ show e' ]
-    where
-      help (Just t) = ", expected type `" ++ show t ++ "`"
-      help Nothing  = ""
-  show (TApplyFail (e, t) t')        = intercalate "\n"
-    [ "• Invalid type application"
-    , "• Expression of type `" ++ show t ++ "`"
-    , "    " ++ show e
-    , "  was applied to type `" ++ show t' ++ "`" ]
+  show = intercalate "\n" . \case
+    UnboundVar x                -> [ SHOW_BULLET ++ " Variable not bound"
+                                   , "    " ++ x ]
+    UnboundTyVar a              -> [ SHOW_BULLET ++ " Type variable not bound"
+                                   , "    " ++ a ]
+    ApplyFail (e, t) (e', t') u -> help u ++
+                                   [ SHOW_BULLET ++ " Failed application of expression"
+                                   , "    " ++ show e
+                                   , "      having type `" ++ show t ++ "`"
+                                   , "  with expression"
+                                   , "    " ++  show e'
+                                   , "      having type `" ++ show t' ++ "`" ]
+      where
+        help (Just (TyFun u _)) =  [ SHOW_BULLET ++ " Expected type `" ++ show u ++ "` not matching with given type `" ++ show t' ++ "`"
+                                   , "" ]
+        help _                  =  []
+    TApplyFail (e, t) u         -> [ SHOW_BULLET ++ " Failed type application of expression"
+                                   , "    " ++ show e
+                                   , "      having type `" ++ show t ++ "`"
+                                   , "  with type `" ++ show u ++ "`" ]
 
 substType :: (Var, Type) -> Type -> Type
 substType s@(b, t) = \case

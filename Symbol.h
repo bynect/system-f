@@ -5,9 +5,11 @@
 #define SHOW_FORALL  "∀"
 #define SHOW_IN      "∈"
 #define SHOW_NOT     "¬"
-#define SHOW_TURN	 "⊢"
+#define SHOW_TURN    "⊢"
 #define SHOW_ENV     "Γ"
 #define SHOW_TENV    "Θ"
+#define SHOW_TYPE    "τ"
+#define SHOW_BULLET  "•"
 #else
 #define SHOW_LAM     "\\"
 #define SHOW_TLAM    "/\\"
@@ -15,7 +17,9 @@
 #define SHOW_FORALL  "forall "
 #define SHOW_IN      "in"
 #define SHOW_NOT     "~"
-#define SHOW_TURN	 "|-"
+#define SHOW_TURN    "|-"
 #define SHOW_ENV     "E"
 #define SHOW_TENV    "TE"
+#define SHOW_TYPE    "t"
+#define SHOW_BULLET  "*"
 #endif

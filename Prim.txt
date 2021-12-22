@@ -1,0 +1,18 @@
+{-
+Define some basic types and operations
+
+You can load this file before a repl session by doing
+    ./Main Prim.txt -
+-}
+
+-- Church booleans
+bool  = [forall a. a -> a -> a]
+true  = /\a. \x:a. \y:a. x
+false = /\a. \x:a. \y:a. y
+
+-- Church numerals
+nat   = [forall a. a -> (a -> a) -> a]
+zero  = /\a. \x:a. \f:a -> a. x
+succ  = \n:nat. /\a. \x:a. \f:a -> a. f (n [a] x f)
+
+-- TODO: More operations and types

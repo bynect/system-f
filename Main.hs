@@ -33,12 +33,14 @@ handleTopExpr env sub a = do
       putStr $ x ++ " : "
       print t
       modifyIORef env $ Map.insert x t
-    BindTy a t -> case checkType tenv $ substType sub' t of
+    BindTy a t -> case checkType tenv t' of
       Right () -> do
         putStr $ a ++ " : "
         print t
-        modifyIORef sub $ Map.insert a t
+        modifyIORef sub $ Map.insert a t'
       Left  e  -> print e
+      where
+        t' = substType sub' t
   where
     tenv = Set.empty
 

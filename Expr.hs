@@ -4,7 +4,8 @@
 module Expr
   (
     Var, ExprEnv, TypeEnv,
-    Expr(..), TopExpr(..),
+    Expr(..),
+    TopExpr(..),
     Type(..),
   ) where
 

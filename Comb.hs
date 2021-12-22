@@ -7,12 +7,12 @@ module Comb
     pAny,
     pEof,
     pError,
-    pTry, pOpt,
+    pTry,
     (<|>),
+    pOpt,
     pPred,
-    pMany, pMany1,
-    pSepBy, pSepBy1,
     pChoice, pManyTill,
+    pMany, pMany1,
     pChar,
     pSpace, pSpaces,
     pString,
@@ -27,7 +27,7 @@ import Data.Functor
 import Data.Char
 
 data ParseError = PError { expected :: String
-                          , found    :: String }
+                         , found    :: String }
 
 instance Show ParseError where
   show (PError expected found) = "Expected " ++ expected ++ " instead of " ++ found
@@ -55,8 +55,8 @@ pAny = Parser $ \case
 
 pEof :: Parser ()
 pEof = Parser $ \case
-  [] -> ("", Right ())
-  xs -> (xs, Left $ PError "eof" xs)
+  []     -> ("", Right ())
+  (x:xs) -> (x:xs, Left $ PError "eof" [x])
 
 pError :: String -> String -> Parser a
 pError expected found = Parser $ \s -> (s, Left $ PError expected found)
@@ -66,29 +66,21 @@ pTry p = Parser $ \s -> case runParser p s of
   (s', Right a) -> (s', Right a)
   (_, e)        -> (s, e)
 
-pOpt :: a -> Parser a -> Parser a
-pOpt x p = p <|> return x
-
 (<|>) :: Parser a -> Parser a -> Parser a
 p <|> p' = Parser $ \s -> case runParser p s of
   (s', Right a) -> (s', Right a)
   (s', Left e) | s == s'   -> runParser p' s
                | otherwise -> (s', Left e)
 
+pOpt :: a -> Parser a -> Parser a
+pOpt x p = p <|> return x
+
 pPred :: String -> (Char -> Bool) -> Parser Char
 pPred expected pred = pTry $ do
   c <- pAny
-  case pred c of
-    True  -> pure c
-    False -> pError expected [c]
-
-pMany, pMany1 :: Parser a -> Parser [a]
-pMany  p = pMany1 p <|> pure []
-pMany1 p = liftA2 (:) p $ pMany p
-
-pSepBy, pSepBy1 :: Parser a -> Parser b -> Parser [a]
-pSepBy  p p' = pSepBy1 p p' <|> pure []
-pSepBy1 p p' = liftA2 (:) p $ pMany (p' >> p)
+  if pred c
+     then pure c
+     else pError expected [c]
 
 pChoice :: String -> [Parser a] -> Parser a
 pChoice expected = foldr (<|>) (pError expected "other")
@@ -103,6 +95,10 @@ pManyTill p p' = go
         x <- p
         xs <- go
         return (x:xs)
+
+pMany, pMany1 :: Parser a -> Parser [a]
+pMany  p = pMany1 p <|> pure []
+pMany1 p = liftA2 (:) p $ pMany p
 
 pChar :: Char -> Parser Char
 pChar c = pPred [c] (== c)

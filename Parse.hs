@@ -2,13 +2,13 @@
 module Parse
   (
     parseExpr,
-    parseTopExpr,
+    parseTopExpr, parseTopExpr',
     parseType
   ) where
 
 import Control.Monad
-import Data.Function ((&))
 import Data.Char
+
 import Expr
 import Comb
 
@@ -49,20 +49,30 @@ parseSym s = pString s <* parseSpace
 parseParen :: Parser a -> Parser a
 parseParen p = pBetween (parseSym "(") (parseSym ")") p
 
+parseComment :: Parser ()
+parseComment = void $ p <|> p'
+  where
+    -- Line comment
+    p = pTry (pString "--") *> pManyTill pAny pEol
+
+    -- Block comment
+    p' = pTry (pString "{-") *> pManyTill pAny ((void $ pTry $ pString "-}") <|> pEof)
+
 parseSpace :: Parser ()
 parseSpace = pChoice "whitespace"
-  [ lineComment  *> parseSpace
-  , blockComment *> parseSpace
-  , whitespace   *> parseSpace
+  [ p            *> parseSpace
+  , parseComment *> parseSpace
   , return () ]
   where
-    lineComment  = pTry (pString "--") *> pManyTill pAny pEol
-    blockComment = pTry (pString "{-") *> pManyTill pAny (pTry $ pString "-}")
-    whitespace   = void $ pMany1 $ pPred "space" $ \c ->
-      c == '\t' || c == ' ' || c == '\r'
+    p            = void $ pMany1 $ pPred "space" (\c -> c /= '\n' && isSpace c)
 
-parseSpaceLine :: Parser ()
-parseSpaceLine = parseSpace <|> void pSpaces
+parseSpace' :: Parser ()
+parseSpace' = pChoice "whitespace"
+  [ p            *> parseSpace'
+  , parseComment *> parseSpace'
+  , return () ]
+  where
+    p = void $ pMany1 $ pPred "space" isSpace
 
 parseExpr :: Parser Expr
 parseExpr = p >>= parseApp
@@ -126,13 +136,25 @@ parseLet = do
 #endif
 
 parseTopExpr :: Parser (Maybe TopExpr)
-parseTopExpr = (parseSpaceLine *>) . (<* pEol) $  pChoice "top expression"
-  [ Just <$> (parseIdentExpr <* parseSpace >>= p)
-  , Just <$> Expr <$> parseExpr
+parseTopExpr = parseSpace *> pChoice "top expression"
+  [ Just    <$> p
+  , Just    <$> Expr <$> parseExpr
   , Nothing <$ pEof ]
   where
-      p x = pTry (parseSym "=" >> Bind x <$> parseExpr)
-            <|> (Expr <$> (parseApp $ Var x))
+    p = do
+      x <- parseIdentExpr <* parseSpace
+      pTry (parseSym "=" >> Bind x <$> parseExpr)
+        <|> (Expr <$> (parseApp $ Var x))
+
+parseTopExpr' :: Parser [TopExpr]
+parseTopExpr' = pManyTill (parseSpace' *> (pTry p <|> p') <* parseSpace') pEof
+  where
+    p = (parseIdentExpr <* parseSpace) >>= \x -> pTry $ do
+        parseSym "="
+        Bind x <$> parseExpr
+      <|> (Expr <$> (parseApp $ Var x))
+
+    p' = Expr <$> parseExpr
 
 parseType :: Parser Type
 parseType = do

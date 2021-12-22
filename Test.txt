@@ -1,0 +1,17 @@
+
+-- Comment 1
+I = /\a. \x:a. x   -- I
+
+{- Comment 2 -}
+
+K = /\a. \x:a. /\b. \y:b. x {- K -}
+
+{- I application -}
+I [Nat -> Nat] (\x:Nat. x)
+
+(/\x. \x:x.x) {-Funny comment-} [forall x. x -> x] {--} (/\a. \x:a. x)
+
+(K [forall X. X -> X] I) [forall X. X -> X] I {--}
+
+-- Bottom text
+

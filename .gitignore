@@ -1,4 +1,4 @@
-!*.hs
-!Makefile
-!*.txt
-*
+*.o
+*.hi
+*.old
+Main

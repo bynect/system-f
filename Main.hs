@@ -15,25 +15,35 @@ import Check
 import Parse
 import Expr
 import Comb
+import Subst
 
 handleExpr :: ExprEnv -> TypeEnv -> Expr -> (Type -> IO ()) -> IO ()
 handleExpr env tenv e f = case checkExpr env tenv e of
   Right t -> f t
   Left  e -> putStr ['⊥', '\n', '\n'] >> print e
 
-handleTopExpr :: IORef ExprEnv -> TypeEnv -> TopExpr -> IO ()
-handleTopExpr env tenv a = do
-    env'  <- readIORef env
-    print a
-    case a of
-      Expr e   -> handleExpr env' tenv e print
-      Bind x e -> handleExpr env' tenv e $ \t -> do
-        putStr $ x ++ " : "
+handleTopExpr :: IORef ExprEnv -> IORef TypeSubst -> TopExpr -> IO ()
+handleTopExpr env sub a = do
+  env' <- readIORef env
+  sub' <- readIORef sub
+  print a
+  case a of
+    Expr e     -> handleExpr env' tenv (substExpr sub' e) print
+    Bind x e   -> handleExpr env' tenv (substExpr sub' e) $ \t -> do
+      putStr $ x ++ " : "
+      print t
+      modifyIORef env $ Map.insert x t
+    BindTy a t -> case checkType tenv $ substType sub' t of
+      Right () -> do
+        putStr $ a ++ " : "
         print t
-        modifyIORef env $ Map.insert x t
+        modifyIORef sub $ Map.insert a t
+      Left  e  -> print e
+  where
+    tenv = Set.empty
 
-handleLoop :: IORef ExprEnv -> TypeEnv -> IO ()
-handleLoop env tenv = do
+handleLoop :: IORef ExprEnv -> IORef TypeSubst -> IO ()
+handleLoop env sub = do
   putStr "c> "
   hFlush stdout
   eof <- isEOF
@@ -42,32 +52,29 @@ handleLoop env tenv = do
     else do
       s <- getLine
       case pRun parseTopExpr s of
-        Right (Just a) -> handleTopExpr env tenv a
+        Right (Just a) -> handleTopExpr env sub a
         Right Nothing  -> putStrLn ""
-        Left e         -> print e >> putStrLn s
-      handleLoop env tenv
+        Left  e        -> print e >> putStrLn s
+      handleLoop env sub
 
-handleFile :: IORef ExprEnv -> TypeEnv -> String -> IO ()
-handleFile env tenv f = do
+handleFile :: IORef ExprEnv -> IORef TypeSubst -> String -> IO ()
+handleFile env sub f = do
   s <- readFile f
   case pRun parseTopExpr' s of
-    Right a -> forM_ a $ handleTopExpr env tenv
-    Left e  -> print e
+    Right a -> forM_ a $ handleTopExpr env sub
+    Left  e -> print e
 
-handleFiles :: IORef ExprEnv -> TypeEnv -> [String] -> IO ()
-handleFiles env tenv = flip forM_ $ \f ->
+handleFiles :: IORef ExprEnv -> IORef TypeSubst -> [String] -> IO ()
+handleFiles env sub = flip forM_ $ \f ->
   if f == "-"
-     then handleLoop env tenv
-     else handleFile env tenv f
+     then handleLoop env sub
+     else handleFile env sub f
 
 main :: IO ()
 main = do
   env  <- newIORef $ Map.empty
+  sub  <- newIORef $ Map.empty
   args <- getArgs
   case args of
-    [] -> handleLoop env tenv
-    fs -> handleFiles env tenv fs
-  where
-    tenv = Set.fromList
-      [ "Nat"
-      , "Bool" ]
+    [] -> handleLoop  env sub
+    fs -> handleFiles env sub fs

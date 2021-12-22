@@ -21,8 +21,8 @@ module Comb
     pRun
   ) where
 
-import Control.Monad
 import Control.Applicative (liftA2)
+import Control.Monad
 import Data.Functor
 import Data.Char
 

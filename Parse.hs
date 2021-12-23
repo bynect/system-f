@@ -15,13 +15,13 @@ import Comb
 parseIdent :: Parser String
 parseIdent = do
   s  <- pMany1 $ pPred "identifier" pred
-  s' <- pMany $ pPred "identifier" (== '\'')
+  s' <- pMany  $ pPred "identifier" (== '\'')
   return $ s ++ s'
   where
-      pred c = (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')
-            || (c >= '0' && c <= '9')
-            || c == '_'
+    -- Exclude reserved Unicode characters
+    -- TODO: Improve error reporting
+    pred c = isAlphaNum c || c == '_'
+             && c `notElem` ['λ', 'Λ', '∀']
 
 -- Identifiers except expression-related keywords
 parseIdentExpr :: Parser String

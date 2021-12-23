@@ -23,23 +23,27 @@ parseIdent = do
     pred c = isAlphaNum c || c == '_'
              && c `notElem` ['λ', 'Λ', '∀']
 
+keywordExpr, keywordType :: String -> Bool
+#ifdef SUGAR_LET
+keywordExpr s = s == "let" || s == "in"
+#else
+keywordExpr _ = True
+#endif
+keywordType s = s == "forall"
+
 -- Identifiers except expression-related keywords
 parseIdentExpr :: Parser String
-#ifdef SUGAR_LET
 parseIdentExpr = do
   s <- parseIdent
-  if s == "let" || s == "in"
+  if keywordType s
     then pError "identifier" "keyword"
     else return s
-#else
-parseIdentExpr = parseIdent
-#endif
 
 -- Identifiers except type-related keywords
 parseIdentType :: Parser String
 parseIdentType = do
   s <- parseIdent
-  if s == "forall"
+  if keywordType s
     then pError "identifier" "keyword"
     else return s
 
@@ -140,28 +144,41 @@ parseLet = do
 
 parseTopExpr :: Parser (Maybe TopExpr)
 parseTopExpr = parseSpace *> pChoice "top expression"
-  [ Just    <$> p
+  [ Just    <$> pTry p
   , Just    <$> Expr <$> parseExpr
-  , Nothing <$ pEof ]
+  , Nothing <$  pEof ]
   where
     p = do
-      x <- parseIdentExpr <* parseSpace
-      pChoice "top expression"
-        [ pTry $ parseSym "=" >> Bind x <$> parseExpr
-        , pTry $ parseSym "=" >> parseBrack (BindTy x <$> parseType)
-        , Expr <$> (parseApp $ Var x) ]
+      xs <- pSepBy1 (parseIdent <* parseSpace) (parseSym ",")
+      parseSym "="
+      pChoice "binding"
+        [ BindTy xs <$> p' xs (parseBrack parseType) keywordType
+        , Bind   xs <$> p' xs parseExpr keywordExpr ]
+
+    p' xs p pred = do
+      a <- p
+      forM_ xs $ \x -> if pred x
+        then pError "identifier" "keyword"
+        else return x
+      return a
 
 parseTopExpr' :: Parser [TopExpr]
-parseTopExpr' = pManyTill (parseSpace' *> (pTry p <|> p') <* parseSpace') pEof
+parseTopExpr' = pManyTill (parseSpace' *> (pTry p <|> (Expr <$> parseExpr)) <* parseSpace') pEof
   where
-    p  = do
-      x <- parseIdentExpr <* parseSpace
-      pChoice "top expression"
-        [ pTry $ parseSym "=" >> Bind x <$> parseExpr
-        , pTry $ parseSym "=" >> parseBrack (BindTy x <$> parseType)
-        , Expr <$> (parseApp $ Var x) ]
+    -- FIXME: The local functions of parseTopExpr are copy-pasted here
+    p = do
+      xs <- pSepBy1 (parseIdent <* parseSpace) (parseSym ",")
+      parseSym "="
+      pChoice "binding"
+        [ BindTy xs <$> p' xs (parseBrack parseType) keywordType
+        , Bind   xs <$> p' xs parseExpr keywordExpr ]
 
-    p' = Expr <$> parseExpr
+    p' xs p pred = do
+      a <- p
+      forM_ xs $ \x -> if pred x
+        then pError "identifier" "keyword"
+        else return x
+      return a
 
 parseType :: Parser Type
 parseType = do

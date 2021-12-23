@@ -13,6 +13,7 @@ module Comb
     pPred,
     pChoice, pManyTill,
     pMany, pMany1,
+    pSepBy, pSepBy1,
     pChar,
     pSpace, pSpaces,
     pString,
@@ -99,6 +100,10 @@ pManyTill p p' = go
 pMany, pMany1 :: Parser a -> Parser [a]
 pMany  p = pMany1 p <|> pure []
 pMany1 p = liftA2 (:) p $ pMany p
+
+pSepBy, pSepBy1 :: Parser a -> Parser b -> Parser [a]
+pSepBy  p p' = pSepBy1 p p' <|> pure []
+pSepBy1 p p' = liftA2 (:) p $ pMany (p' >> p)
 
 pChar :: Char -> Parser Char
 pChar c = pPred [c] (== c)

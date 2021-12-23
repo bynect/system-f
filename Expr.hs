@@ -49,8 +49,8 @@ data Expr = Var  Var
           deriving Eq
 
 data TopExpr = Expr   Expr
-             | Bind   Var Expr
-             | BindTy Var Type
+             | Bind   [Var] Expr
+             | BindTy [Var] Type
              deriving Eq
 
 {-
@@ -91,8 +91,8 @@ instance Show Expr where
 
 instance Show TopExpr where
   show (Expr e)     = show e
-  show (Bind x e)   = x ++ " = " ++ show e
-  show (BindTy a t) = a ++ " = [" ++ show t ++ "]"
+  show (Bind x e)   = intercalate ", " x ++ " = "  ++ show e
+  show (BindTy a t) = intercalate ", " a ++ " = [" ++ show t ++ "]"
 
 instance Show Type where
   show (TyVar a)         = a

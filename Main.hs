@@ -10,6 +10,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.List (intercalate)
 
 import Check
 import Parse
@@ -28,17 +29,17 @@ handleTopExpr env sub a = do
   sub' <- readIORef sub
   print a
   case a of
-    Expr e     -> handleExpr env' tenv (substExpr sub' e) print
-    Bind x e   -> handleExpr env' tenv (substExpr sub' e) $ \t -> do
-      putStr $ x ++ " : "
+    Expr e      -> handleExpr env' tenv (substExpr sub' e) print
+    Bind xs e   -> handleExpr env' tenv (substExpr sub' e) $ \t -> do
+      putStr $ intercalate ", " xs ++ " : "
       print t
-      modifyIORef env $ Map.insert x t
-    BindTy a t -> case checkType tenv t' of
-      Right () -> do
-        putStr $ a ++ " : "
+      forM_ xs $ \x -> modifyIORef env $ Map.insert x t
+    BindTy as t -> case checkType tenv t' of
+      Right ()  -> do
+        putStr $ intercalate ", " as ++ " : "
         print t
-        modifyIORef sub $ Map.insert a t'
-      Left  e  -> print e
+        forM_ as $ \a -> modifyIORef sub $ Map.insert a t'
+      Left  e   -> print e
       where
         t' = substType sub' t
   where

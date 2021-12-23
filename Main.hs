@@ -18,6 +18,7 @@ import Expr
 import Comb
 import Subst
 
+-- TODO: Evaluation
 handleExpr :: ExprEnv -> TypeEnv -> Expr -> (Type -> IO ()) -> IO ()
 handleExpr env tenv e f = case checkExpr env tenv e of
   Right t -> f t

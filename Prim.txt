@@ -6,24 +6,24 @@ You can load this file before a repl session by doing
 -}
 
 -- SKI combinators
-I     = Λα. λx:α. x
-K     = Λα. λx:α. Λb. λy:b. x
-S     = Λα. λx:α -> α -> α. λy:α -> α. λz:α. x z (y z)
+I, id    = Λα. λx:α. x
+K, const = Λα. λx:α. Λb. λy:b. x
+S, ap    = Λα. λx:α -> α -> α. λy:α -> α. λz:α. x z (y z)
 
 -- Church booleans
-bool  = [∀α. α → α → α]
-true  = Λα. λx:α. λy:α. x
-false = Λα. λx:α. λy:α. y
+B, bool  = [∀α. α → α → α]
+T, true  = Λα. λx:α. λy:α. x
+F, false = Λα. λx:α. λy:α. y
 
-and   = λx:bool. λy:bool. x [bool] y false
-or    = λx:bool. λy:bool. x [bool] true y
-not   = λx:bool. x [bool] false true
-if    = Λα. λx:bool. λy:α. λz:α. x [α] y z
+and      = λx:bool. λy:bool. x [bool] y false
+or       = λx:bool. λy:bool. x [bool] true y
+not      = λx:bool. x [bool] false true
+if       = Λα. λx:bool. λy:α. λz:α. x [α] y z
 
 -- Church numerals
-nat   = [∀α. α -> (α -> α) -> α]
-zero  = Λα. λx:α. λf:α -> α. x
-succ  = λn:nat. Λα. λx:α. λf:α -> α. f (n [α] x f)
+N, nat   = [∀α. α -> (α -> α) -> α]
+0, zero  = Λα. λx:α. λf:α -> α. x
+S, succ  = λn:nat. Λα. λx:α. λf:α -> α. f (n [α] x f)
 
 -- TODO: iszero
 

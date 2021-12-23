@@ -18,10 +18,17 @@ false = Λα. λx:α. λy:α. y
 and   = λx:bool. λy:bool. x [bool] y false
 or    = λx:bool. λy:bool. x [bool] true y
 not   = λx:bool. x [bool] false true
+if    = Λα. λx:bool. λy:α. λz:α. x [α] y z
 
 -- Church numerals
 nat   = [∀α. α -> (α -> α) -> α]
 zero  = Λα. λx:α. λf:α -> α. x
 succ  = λn:nat. Λα. λx:α. λf:α -> α. f (n [α] x f)
 
--- TODO: More operations and types
+-- TODO: iszero
+
+-- Church pairs
+-- TODO: pair, fst, snd
+
+-- Church lists
+-- TODO:  list, nil, cons, isnil

@@ -5,6 +5,11 @@ You can load this file before a repl session by doing
     ./Main Prim.txt -
 -}
 
+-- SKI combinators
+I     = Λα. λx:α. x
+K     = Λα. λx:α. Λb. λy:b. x
+S     = Λα. λx:α -> α -> α. λy:α -> α. λz:α. x z (y z)
+
 -- Church booleans
 bool  = [∀α. α → α → α]
 true  = Λα. λx:α. λy:α. x

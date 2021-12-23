@@ -6,13 +6,17 @@ You can load this file before a repl session by doing
 -}
 
 -- Church booleans
-bool  = [forall a. a -> a -> a]
-true  = /\a. \x:a. \y:a. x
-false = /\a. \x:a. \y:a. y
+bool  = [∀α. α → α → α]
+true  = Λα. λx:α. λy:α. x
+false = Λα. λx:α. λy:α. y
+
+and   = λx:bool. λy:bool. x [bool] y false
+or    = λx:bool. λy:bool. x [bool] true y
+not   = λx:bool. x [bool] false true
 
 -- Church numerals
-nat   = [forall a. a -> (a -> a) -> a]
-zero  = /\a. \x:a. \f:a -> a. x
-succ  = \n:nat. /\a. \x:a. \f:a -> a. f (n [a] x f)
+nat   = [∀α. α -> (α -> α) -> α]
+zero  = Λα. λx:α. λf:α -> α. x
+succ  = λn:nat. Λα. λx:α. λf:α -> α. f (n [α] x f)
 
 -- TODO: More operations and types

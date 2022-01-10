@@ -1,7 +1,5 @@
 # System F
 
-TODO: System F Omega (kinds, type function, etc)
-
 ## Notation
 
 Traditionally the following notation is used in type theoretic documents:
@@ -9,7 +7,7 @@ Traditionally the following notation is used in type theoretic documents:
 * Terms are denoted by a lowercase e `e`
 * Types are denoted by a lowercase tau `τ`
 * Term variables are denoted by a lowercase x `x`
-* Type variables are denoted by a lowercase alpha`α` (or sometimes a lowercase beta `β`)
+* Type variables are denoted by a lowercase alpha `α` (or sometimes a lowercase beta `β`)
 * Typing environments are denoted by an uppercase sigma `Γ`
 * Kinding environments are denoted by an uppercase theta `Θ`
 
@@ -36,7 +34,9 @@ e = x         variable
   | ∀α. τ     universal quantifier
 ```
 
-### Extensions
+## Extensions
+
+### Let
 
 Thus `let x = e in e'` is equivalent to
 
@@ -49,14 +49,9 @@ Thus they are equivalent to `(λx:τ. e') e`.
 
 You can enable this extension by defining `SUGAR_LET`. FIXME
 
-### Ascii
+### System F Omega
 
-The following ASCII alternatives are supported by the REPL.
-
-* `\` instead of lowercase lambda `λ`
-* `/\` instead of uppercase lambda `Λ`
-* `->` instead of unicode arrow `→`
-* `forall` instead of turned uppercase a `∀`
+TODO
 
 ## REPL
 
@@ -81,6 +76,17 @@ nat = [∀α. α → (α → α) → α]
 ### Evaluation
 
 Not implemented yet. TODO
+
+### Unicode support
+
+The REPL accepts the following ASCII alternatives for some Unicode characters.
+
+* `\` instead of lowercase lambda `λ`
+* `/\` instead of uppercase lambda `Λ`
+* `->` instead of unicode arrow `→`
+* `forall` instead of turned uppercase a `∀`
+
+If `SHOW_UNICODE` is defined Unicode characters are used to print expression, types, etc.
 
 ## License
 

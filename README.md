@@ -60,8 +60,6 @@ Upon encountering `-`, even when it is not the last argument, it will start an i
 
 ### Example
 
-The program first loads the file [`Prim.txt`](/Prim.txt), which contains some basic definitions (SKI, nats, ...), and then starts an interactive session.
-
 ```haskell
 $ ./Main Prim.txt -
 I, id = Λα. λx:α. x
@@ -71,6 +69,9 @@ S, succ = λn:nat. Λα. λx:α. λf:α → α. f ((n [α]) x f)
 S, succ : (∀α. α → (α → α) → α) → (∀α. α → (α → α) → α)
 c> -- REPL starts
 ```
+
+This invocation of the program first loads the file [`Prim.txt`](/Prim.txt), which contains some basic definitions (SKI, nats, ...).
+Then it starts an interactive session, preserving the definitions of the aforementioned file.
 
 ## Features
 

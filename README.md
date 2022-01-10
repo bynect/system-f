@@ -53,7 +53,26 @@ You can enable this extension by defining `SUGAR_LET`. FIXME
 
 TODO
 
-## REPL
+## Usage
+
+The program runs every file provided in the command line arguments in order, preserving the changes of the previous.
+Upon encountering `-`, even when it is not the last argument, it will start an interactive session.
+
+### Example
+
+The program first loads the file [`Prim.txt`](/Prim.txt), which contains some basic definitions (SKI, nats, ...), and then starts an interactive session.
+
+```haskell
+$ ./Main Prim.txt -
+I, id = Λα. λx:α. x
+I, id : ∀α. α → α
+-- Other definitions...
+S, succ = λn:nat. Λα. λx:α. λf:α → α. f ((n [α]) x f)
+S, succ : (∀α. α → (α → α) → α) → (∀α. α → (α → α) → α)
+c> -- REPL starts
+```
+
+## Features
 
 ### Type checking
 

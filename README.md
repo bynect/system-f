@@ -38,7 +38,7 @@ e = x         variable
 
 ### Let
 
-Thus `let x = e in e'` is equivalent to
+
 
 ```haskell
 let x:τ = e in e'
